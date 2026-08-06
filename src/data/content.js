@@ -82,7 +82,9 @@ export const trayectoria = [
   },
 ]
 
-/* Los 3 primeros aparecen destacados en la home. Todos aparecen en /expedientes */
+/* Los 3 primeros aparecen destacados en la home. Todos aparecen en /expedientes.
+   imagen: ruta a una captura del proyecto en /public (ej. '/proyectos/sistema-escolar.png').
+   Si se deja vacío, se usa el degradado de `tono` como placeholder. */
 export const expedientes = [
   {
     slug: 'sistema-escolar',
@@ -92,6 +94,7 @@ export const expedientes = [
     categoria: 'Plataforma',
     resumen: 'Gestión académica completa con roles, evaluaciones, asistencia y reportes en tiempo real.',
     stack: ['Laravel', 'MySQL', 'Vue.js'],
+    imagen: '',
     tono: ['#3B1D8F', '#7C3AED'],
     demo: '#',
     repo: '#',
@@ -114,6 +117,7 @@ export const expedientes = [
     categoria: 'Plataforma',
     resumen: 'Sistema veterinario para pacientes, citas, historias clínicas e inventario de insumos.',
     stack: ['Laravel', 'MySQL', 'Alpine.js'],
+    imagen: '',
     tono: ['#0E3B4C', '#22D3EE'],
     demo: '#',
     repo: '#',
@@ -135,6 +139,7 @@ export const expedientes = [
     categoria: 'E-commerce',
     resumen: 'Tienda en línea para venta de productos personalizados con configurador de bordado.',
     stack: ['PHP', 'MySQL', 'JavaScript'],
+    imagen: '',
     tono: ['#4A1060', '#DB2777'],
     demo: '#',
     repo: '#',
@@ -153,6 +158,7 @@ export const expedientes = [
     categoria: 'Herramienta',
     resumen: 'Aplicación de organización personal con recordatorios, etiquetas y estadísticas de hábitos.',
     stack: ['React', 'Node.js', 'PostgreSQL'],
+    imagen: '',
     tono: ['#101A3A', '#8B5CF6'],
     demo: '#',
     repo: '#',
@@ -167,6 +173,7 @@ export const expedientes = [
     categoria: 'Experimento',
     resumen: 'Experiencia 3D con física real, scroll cinematográfico y un concepto de credencial de acceso.',
     stack: ['React', 'Three.js', 'GSAP'],
+    imagen: '',
     tono: ['#1B1140', '#C4B5FD'],
     demo: '#',
     repo: '#',

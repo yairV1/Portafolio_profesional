@@ -275,10 +275,14 @@ export function FileCard({ p, onOpen }) {
     <article className="file" data-cursor onClick={onOpen} role={onOpen ? 'button' : undefined} tabIndex={onOpen ? 0 : undefined}
       onKeyDown={(e) => { if (onOpen && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onOpen() } }}>
       <div className="file-shot">
-        <div
-          className="sheen"
-          style={{ background: `linear-gradient(135deg, ${p.tono[0]}, ${p.tono[1]})` }}
-        />
+        {p.imagen ? (
+          <img className="sheen" src={p.imagen} alt="" loading="lazy" />
+        ) : (
+          <div
+            className="sheen"
+            style={{ background: `linear-gradient(135deg, ${p.tono[0]}, ${p.tono[1]})` }}
+          />
+        )}
         <div className="file-meta">
           <span className={`st ${p.estado === 'live' ? 'live' : 'arch'}`}>
             {p.estado === 'live' ? 'En producción' : 'Archivado'}

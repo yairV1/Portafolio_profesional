@@ -219,12 +219,21 @@ p.lede{color:var(--dust);font-size:clamp(15px,1.5vw,18px);max-width:56ch}
 
 /* ============ Z-04 TRAYECTORIA ============ */
 .track-pin{position:relative;overflow:hidden}
-.track-rail{display:flex;gap:22px;align-items:stretch;will-change:transform;padding:56px 0 8px}
+.track-rail{
+  display:flex;gap:22px;align-items:stretch;will-change:transform;padding:56px 0 26px;
+  scroll-snap-type:x proximity;
+  scrollbar-width:thin;scrollbar-color:var(--beam) transparent;
+}
+.track-rail::-webkit-scrollbar{height:5px}
+.track-rail::-webkit-scrollbar-track{background:transparent}
+.track-rail::-webkit-scrollbar-thumb{background:var(--beam);border-radius:99px}
+.track-rail::-webkit-scrollbar-thumb:hover{background:var(--beam-hot)}
 .track-card{
   flex:0 0 clamp(280px,31vw,400px);padding:32px 28px;border-radius:var(--r-lg);
   border:1px solid var(--glass-line);background:var(--glass);
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   display:flex;flex-direction:column;gap:12px;position:relative;
+  scroll-snap-align:start;
 }
 .track-card:before{
   content:'';position:absolute;left:28px;right:28px;top:0;height:1px;
@@ -246,7 +255,7 @@ p.lede{color:var(--dust);font-size:clamp(15px,1.5vw,18px);max-width:56ch}
 }
 .file:hover{transform:translateY(-10px);border-color:var(--glass-line-hot);box-shadow:0 46px 80px -40px rgba(0,0,0,1),0 0 60px -26px rgba(139,92,246,.55)}
 .file-shot{height:210px;position:relative;overflow:hidden}
-.file-shot .sheen{position:absolute;inset:0;transition:transform .9s var(--ease)}
+.file-shot .sheen{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .9s var(--ease)}
 .file:hover .file-shot .sheen{transform:scale(1.07)}
 .file-shot:after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,6,12,0) 35%,rgba(7,6,12,.92))}
 .file-meta{
