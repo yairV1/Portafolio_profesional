@@ -14,7 +14,7 @@ export const identity = {
     'Construyo productos digitales rápidos, escalables y cuidados al detalle. Me interesa el punto exacto donde el código limpio y el buen diseño se encuentran.',
   disponible: 'Disponible para proyectos',
   cv: '#', // ruta a tu CV en /public, ej: '/cv-yair.pdf'
-  foto: '/foto.png',
+  foto: `${import.meta.env.BASE_URL}foto.png`,
   stackHero: ['React', 'TypeScript', 'Laravel', 'Node.js', 'MySQL', 'Three.js'],
 }
 
