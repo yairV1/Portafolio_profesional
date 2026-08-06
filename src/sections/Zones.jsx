@@ -373,15 +373,30 @@ export function Z06() {
 
 /* ================= Z-07 CONTACTO ================= */
 export function Z07() {
-  const [nota, setNota] = useState('')
+  const [estado, setEstado] = useState('idle')
 
-  const enviar = (e) => {
+  const enviar = async (e) => {
     e.preventDefault()
-    const f = new FormData(e.target)
-    const asunto = encodeURIComponent(`Contacto de ${f.get('nombre')}`)
-    const cuerpo = encodeURIComponent(`${f.get('mensaje')}\n\n— ${f.get('nombre')} (${f.get('email')})`)
-    window.location.href = `mailto:${contacto.email}?subject=${asunto}&body=${cuerpo}`
-    setNota('Abriendo tu cliente de correo. Si no ocurre nada, escríbeme directo al email de arriba.')
+    const form = e.target
+    const f = new FormData(form)
+    if (f.get('botcheck')) return
+
+    f.append('access_key', contacto.web3formsKey)
+    f.append('subject', `Contacto de ${f.get('nombre')} — portafolio`)
+
+    setEstado('enviando')
+    try {
+      const res = await fetch('https://api.web3forms.com/submit', { method: 'POST', body: f })
+      const data = await res.json()
+      if (data.success) {
+        setEstado('ok')
+        form.reset()
+      } else {
+        setEstado('error')
+      }
+    } catch {
+      setEstado('error')
+    }
   }
 
   return (
@@ -432,22 +447,32 @@ export function Z07() {
 
         <Reveal from="right" delay={0.1}>
           <form className="form glass" onSubmit={enviar}>
+            <input type="checkbox" name="botcheck" tabIndex="-1" autoComplete="off" style={{ display: 'none' }} />
             <label>
               Nombre
-              <input name="nombre" type="text" required placeholder="¿Cómo te llamas?" />
+              <input name="nombre" type="text" required placeholder="¿Cómo te llamas?" disabled={estado === 'enviando'} />
             </label>
             <label>
               Email
-              <input name="email" type="email" required placeholder="tu@correo.com" />
+              <input name="email" type="email" required placeholder="tu@correo.com" disabled={estado === 'enviando'} />
             </label>
             <label>
               Mensaje
-              <textarea name="mensaje" rows="5" required placeholder="Cuéntame en qué estás pensando..." />
+              <textarea name="mensaje" rows="5" required placeholder="Cuéntame en qué estás pensando..." disabled={estado === 'enviando'} />
             </label>
-            <button className="btn btn-solid" type="submit" style={{ justifyContent: 'center' }} data-cursor>
-              Enviar solicitud
+            <button
+              className="btn btn-solid"
+              type="submit"
+              disabled={estado === 'enviando'}
+              style={{ justifyContent: 'center' }}
+              data-cursor
+            >
+              {estado === 'enviando' ? 'Enviando…' : 'Enviar solicitud'}
             </button>
-            <p className="note">{nota}</p>
+            <p className="note">
+              {estado === 'ok' && 'Mensaje enviado. Te responderé pronto — gracias por escribir.'}
+              {estado === 'error' && 'Algo falló al enviar. Escríbeme directo al email de arriba, por favor.'}
+            </p>
           </form>
         </Reveal>
       </div>

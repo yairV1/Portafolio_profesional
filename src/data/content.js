@@ -6,7 +6,7 @@
 
 export const identity = {
   nombre: 'Yair',
-  apellido: '[Apellido]',
+  apellido: 'Vergara',
   rol: 'Desarrollador de Software',
   especialidad: 'Full-Stack',
   handle: '@yair.dev',
@@ -199,12 +199,12 @@ export const fueraDeHorario = [
 ]
 
 export const contacto = {
-  email: '[tucorreo@ejemplo.com]',
-  telefono: '[+00 000 000 0000]',
-  ubicacion: '[Tu ciudad, País]',
+  email: 'yandrey2007@gmail.com',
+  telefono: '+57 321 256 9376',
+  ubicacion: 'Guaduas, Cundinamarca',
+  web3formsKey: '56505350-989a-4b4a-8b63-1118e8b83bf4',
   redes: [
-    { n: 'GitHub', u: '#' },
-    { n: 'LinkedIn', u: '#' },
-    { n: 'Instagram', u: '#' },
+    { n: 'GitHub', u: 'https://github.com/yairV1' },
+    { n: 'LinkedIn', u: 'https://www.linkedin.com/in/yair-vergara-163043309/' },
   ],
 }
