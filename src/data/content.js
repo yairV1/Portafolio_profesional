@@ -22,10 +22,9 @@ export const zones = [
   { id: 'z01', code: 'Z-01', name: 'Recepción' },
   { id: 'z02', code: 'Z-02', name: 'Perfil' },
   { id: 'z03', code: 'Z-03', name: 'Capacidades' },
-  { id: 'z04', code: 'Z-04', name: 'Trayectoria' },
-  { id: 'z05', code: 'Z-05', name: 'Expedientes' },
-  { id: 'z06', code: 'Z-06', name: 'Fuera de horario' },
-  { id: 'z07', code: 'Z-07', name: 'Contacto' },
+  { id: 'z04', code: 'Z-04', name: 'Expedientes' },
+  { id: 'z05', code: 'Z-05', name: 'Fuera de horario' },
+  { id: 'z06', code: 'Z-06', name: 'Contacto' },
 ]
 
 export const perfil = {
@@ -35,7 +34,7 @@ export const perfil = {
     'Me muevo con la misma comodidad en una consulta SQL que en una animación de entrada. Creo que el detalle no es un lujo — es lo que separa un producto usable de uno que la gente disfruta usar.',
   ],
   stats: [
-    { n: '+3', l: 'Años construyendo' },
+    { n: '+2', l: 'Años construyendo' },
     { n: '20+', l: 'Proyectos entregados' },
     { n: '100%', l: 'Compromiso' },
     { n: '∞', l: 'Por aprender' },
@@ -51,37 +50,6 @@ export const capacidades = [
   { titulo: 'Movimiento', nivel: 74, items: ['GSAP', 'Framer Motion', 'Three.js', 'Lenis'] },
 ]
 
-export const trayectoria = [
-  {
-    cuando: '2024 — Presente',
-    cargo: 'Desarrollador Full-Stack',
-    donde: '[Nombre de la empresa]',
-    texto: 'Desarrollo y mantenimiento de aplicaciones web completas, desde el modelado de datos hasta la interfaz final.',
-    tags: ['Laravel', 'React', 'MySQL'],
-  },
-  {
-    cuando: '2023 — 2024',
-    cargo: 'Desarrollador Frontend',
-    donde: '[Nombre de la empresa]',
-    texto: 'Construcción de interfaces, integración con APIs y optimización de rendimiento y accesibilidad.',
-    tags: ['React', 'TypeScript', 'Tailwind'],
-  },
-  {
-    cuando: '2022 — 2023',
-    cargo: 'Practicante de Desarrollo',
-    donde: '[Nombre de la institución]',
-    texto: 'Primeros módulos en producción, control de versiones en equipo y bases sólidas de backend.',
-    tags: ['PHP', 'MySQL', 'Git'],
-  },
-  {
-    cuando: '2021 — 2022',
-    cargo: 'Formación técnica',
-    donde: '[Nombre de la institución]',
-    texto: 'Fundamentos de programación, estructuras de datos y bases de datos relacionales.',
-    tags: ['Algoritmos', 'SQL', 'POO'],
-  },
-]
-
 /* Los 3 primeros aparecen destacados en la home. Todos aparecen en /expedientes.
    imagen: ruta a una captura del proyecto en /public (ej. '/proyectos/sistema-escolar.png').
    Si se deja vacío, se usa el degradado de `tono` como placeholder. */
@@ -94,7 +62,7 @@ export const expedientes = [
     categoria: 'Plataforma',
     resumen: 'Gestión académica completa con roles, evaluaciones, asistencia y reportes en tiempo real.',
     stack: ['Laravel', 'MySQL', 'Vue.js'],
-    imagen: '',
+    imagen: `${import.meta.env.BASE_URL}proyectos/sistema-escolar.png`,
     tono: ['#3B1D8F', '#7C3AED'],
     demo: '#',
     repo: '#',
@@ -117,7 +85,7 @@ export const expedientes = [
     categoria: 'Plataforma',
     resumen: 'Sistema veterinario para pacientes, citas, historias clínicas e inventario de insumos.',
     stack: ['Laravel', 'MySQL', 'Alpine.js'],
-    imagen: '',
+    imagen: `${import.meta.env.BASE_URL}proyectos/vetwilling.png`,
     tono: ['#0E3B4C', '#22D3EE'],
     demo: '#',
     repo: '#',

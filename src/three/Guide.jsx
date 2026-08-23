@@ -1,244 +1,188 @@
 import * as THREE from 'three'
 import { useRef, useMemo, useState, useEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Float, Environment, Lightformer } from '@react-three/drei'
+import { Float, Environment, Lightformer, useGLTF } from '@react-three/drei'
 
-/* Guía de la instalación: entidad abstracta, no humanoide.
-   Respira, parpadea, sigue el cursor y reacciona al scroll. */
+/* Guía de la instalación: modelo real (CC0, Quaternius "Animated Robot Pack",
+   convertido de OBJ a glb) que saluda al llegar a la sección, sigue el
+   cursor con la mirada, respira mientras está inactivo y vuelve a saludar
+   si le hacen clic. El OBJ no trae huesos, así que las "articulaciones"
+   del hombro/codo/cuello son grupos pivote calculados a mano a partir de
+   los bounding boxes reales de cada pieza del modelo. */
 
-function makeIrisTexture() {
-  const c = document.createElement('canvas')
-  c.width = 256
-  c.height = 256
-  const g = c.getContext('2d')
-  const cx = 128
-  const cy = 128
+const MODEL_URL = `${import.meta.env.BASE_URL}models/robot.glb`
+useGLTF.preload(MODEL_URL)
 
-  const base = g.createRadialGradient(cx, cy, 6, cx, cy, 126)
-  base.addColorStop(0, '#eafcff')
-  base.addColorStop(0.16, '#8fefff')
-  base.addColorStop(0.45, '#22D3EE')
-  base.addColorStop(0.78, '#0e7f93')
-  base.addColorStop(1, '#052226')
-  g.fillStyle = base
-  g.beginPath()
-  g.arc(cx, cy, 126, 0, Math.PI * 2)
-  g.fill()
+const ease = (t) => t * t * (3 - 2 * t) // smoothstep
 
-  g.save()
-  g.beginPath()
-  g.arc(cx, cy, 126, 0, Math.PI * 2)
-  g.clip()
-  g.globalCompositeOperation = 'overlay'
-  for (let i = 0; i < 72; i++) {
-    const a = (i / 72) * Math.PI * 2
-    const len = 34 + ((i * 37) % 60)
-    g.strokeStyle = `rgba(255,255,255,${0.06 + ((i * 13) % 10) / 80})`
-    g.lineWidth = 1.4
-    g.beginPath()
-    g.moveTo(cx + Math.cos(a) * 26, cy + Math.sin(a) * 26)
-    g.lineTo(cx + Math.cos(a) * (26 + len), cy + Math.sin(a) * (26 + len))
-    g.stroke()
-  }
-  g.globalCompositeOperation = 'source-over'
-  g.restore()
+// THREE.MathUtils.lerp no acota su factor: si un frame tiene un delta
+// grande (p. ej. un jank de compilación de shaders), delta*velocidad puede
+// pasar de 1 y el lerp se PASA del objetivo. Acotarlo a 1 evita ese overshoot.
+const damp = (delta, speed) => Math.min(delta * speed, 1)
 
-  g.strokeStyle = 'rgba(4,12,16,0.65)'
-  g.lineWidth = 9
-  g.beginPath()
-  g.arc(cx, cy, 121, 0, Math.PI * 2)
-  g.stroke()
+// pivotes estimados a partir de los bounding boxes reales del glb
+const NECK = [0, 2.8, 0]
+const SHOULDER_R = [-0.64, 2.53, -0.02]
+const ELBOW_R = [-0.95, 1.75, 0.06]
+const ELBOW_LOCAL = [ELBOW_R[0] - SHOULDER_R[0], ELBOW_R[1] - SHOULDER_R[1], ELBOW_R[2] - SHOULDER_R[2]]
+const neg = (v) => [-v[0], -v[1], -v[2]]
 
-  const t = new THREE.CanvasTexture(c)
-  t.colorSpace = THREE.SRGBColorSpace
-  return t
-}
+function Robot({ scrollTilt, waveTrigger }) {
+  const { nodes, materials } = useGLTF(MODEL_URL)
 
-function Core({ scrollTilt }) {
-  const shell = useRef()
-  const lens = useRef()
-  const iris = useRef()
-  const glint = useRef()
-  const ringA = useRef()
-  const ringB = useRef()
-  const halo = useRef()
+  const bot = useRef()
+  const head = useRef()
+  const shoulderR = useRef()
+  const elbowR = useRef()
+  const chestLight = useRef()
 
-  const [blink, setBlink] = useState(1)
   const target = useMemo(() => new THREE.Vector3(), [])
-  const irisTex = useMemo(() => makeIrisTexture(), [])
-  const saccade = useRef({ x: 0, y: 0, tx: 0, ty: 0 })
+  const wave = useRef({ playing: false, t: 0 })
+  const tiltTarget = useRef(0)
+  const headTilt = useRef(0)
 
-  // parpadeo con ritmo irregular, como algo vivo
+  // recolorea los 3 materiales compartidos del pack (naranja/gris/negro por
+  // defecto) a la paleta morado/cian del sitio. Se mutan directamente porque
+  // el modelo solo se usa una vez en toda la app.
+  useEffect(() => {
+    materials.Main.color.set('#7C5CF0')
+    materials.Main.roughness = 0.45
+    materials.Main.metalness = 0.3
+    materials.Grey.color.set('#4b4468')
+    materials.Grey.roughness = 0.5
+    materials.Grey.metalness = 0.25
+    materials.Black.color.set('#0d0b18')
+    materials.Black.roughness = 0.4
+    materials.Black.metalness = 0.35
+  }, [materials])
+
+  // de vez en cuando inclina la cabeza, como si tuviera curiosidad
   useEffect(() => {
     let id
     const schedule = () => {
       id = setTimeout(() => {
-        setBlink(0.08)
-        setTimeout(() => setBlink(1), 110)
-        schedule()
-      }, 2200 + Math.random() * 3400)
-    }
-    schedule()
-    return () => clearTimeout(id)
-  }, [])
-
-  // saccades: pequeños desvíos de la mirada, independientes del cursor
-  useEffect(() => {
-    let id
-    const schedule = () => {
-      id = setTimeout(() => {
-        saccade.current.tx = (Math.random() - 0.5) * 0.18
-        saccade.current.ty = (Math.random() - 0.5) * 0.12
+        tiltTarget.current = (Math.random() > 0.5 ? 1 : -1) * (0.14 + Math.random() * 0.1)
         setTimeout(() => {
-          saccade.current.tx = 0
-          saccade.current.ty = 0
-        }, 260 + Math.random() * 260)
+          tiltTarget.current = 0
+        }, 900 + Math.random() * 500)
         schedule()
-      }, 1800 + Math.random() * 3000)
+      }, 5000 + Math.random() * 6000)
     }
     schedule()
     return () => clearTimeout(id)
   }, [])
 
-  useFrame((state, delta) => {
+  // dispara el saludo cuando la sección entra en vista, o si lo tocan
+  useEffect(() => {
+    if (!waveTrigger) return
+    wave.current.playing = true
+    wave.current.t = 0
+  }, [waveTrigger])
+
+  useFrame((state, rawDelta) => {
+    // acota saltos de delta (pestaña en segundo plano, hitches del navegador)
+    // para que temporizadores como el saludo no se "teletransporten"
+    const delta = Math.min(rawDelta, 1 / 30)
     const t = state.clock.elapsedTime
     const tilt = scrollTilt?.current || 0
+    const w = wave.current
 
-    // respiración
-    if (shell.current) {
-      const b = 1 + Math.sin(t * 1.15) * 0.032
-      shell.current.scale.setScalar(b)
-      shell.current.rotation.y += delta * 0.12
-      shell.current.rotation.x = THREE.MathUtils.lerp(shell.current.rotation.x, tilt * 0.35, delta * 1.5)
-    }
-
-    saccade.current.x = THREE.MathUtils.lerp(saccade.current.x, saccade.current.tx, delta * 10)
-    saccade.current.y = THREE.MathUtils.lerp(saccade.current.y, saccade.current.ty, delta * 10)
-
-    // la mirada sigue al cursor, con micro-desvíos tipo saccade
-    if (lens.current) {
-      target.set(state.pointer.x * 2.4 + saccade.current.x * 3, state.pointer.y * 1.5 + 0.1 + saccade.current.y * 3, 3.2)
-      lens.current.lookAt(target)
-      lens.current.position.x = THREE.MathUtils.lerp(lens.current.position.x, state.pointer.x * 0.13 + saccade.current.x, delta * 3)
-      lens.current.position.y = THREE.MathUtils.lerp(lens.current.position.y, state.pointer.y * 0.09 + saccade.current.y, delta * 3)
-    }
-    if (iris.current) {
-      iris.current.scale.y = THREE.MathUtils.lerp(iris.current.scale.y, blink, delta * 22)
-      iris.current.material.emissiveIntensity = 1.7 + Math.sin(t * 2.6) * 0.35
-    }
-    if (glint.current) {
-      glint.current.position.x = 0.075 + saccade.current.x * 0.4
-      glint.current.position.y = 0.075 - saccade.current.y * 0.4
+    // respiración / pequeño salto de emoción al saludar
+    if (bot.current) {
+      const excite = w.playing && w.t < 0.3 ? Math.sin((w.t / 0.3) * Math.PI) * 0.05 : 0
+      const b = 1 + Math.sin(t * 1.15) * 0.02 + excite
+      bot.current.scale.setScalar(b)
     }
 
-    if (ringA.current) {
-      ringA.current.rotation.z += delta * 0.42
-      ringA.current.rotation.x = Math.sin(t * 0.5) * 0.32
+    // la cabeza mira suavemente hacia el cursor y se inclina con curiosidad
+    if (head.current) {
+      target.set(state.pointer.x * 1.4, state.pointer.y * 0.8 + 0.1, 3)
+      const lookY = Math.atan2(target.x, 3)
+      const lookX = -Math.atan2(target.y, 3)
+      headTilt.current = THREE.MathUtils.lerp(headTilt.current, tiltTarget.current, damp(delta, 3))
+      head.current.rotation.y = THREE.MathUtils.lerp(head.current.rotation.y, lookY * 0.6, damp(delta, 4))
+      head.current.rotation.x = THREE.MathUtils.lerp(
+        head.current.rotation.x,
+        lookX * 0.4 + tilt * 0.18,
+        damp(delta, 4)
+      )
+      head.current.rotation.z = headTilt.current
     }
-    if (ringB.current) {
-      ringB.current.rotation.z -= delta * 0.26
-      ringB.current.rotation.y = Math.cos(t * 0.42) * 0.5
+
+    if (chestLight.current) {
+      chestLight.current.material.emissiveIntensity = 1.3 + Math.sin(t * 2.2) * 0.3
     }
-    if (halo.current) {
-      halo.current.material.opacity = 0.1 + Math.sin(t * 1.6) * 0.045
-      halo.current.rotation.z -= delta * 0.08
+
+    // saludo: hombro levanta el brazo, codo dobla y agita la mano
+    if (w.playing) {
+      w.t += delta
+      const dur = 2.3
+      const riseIn = 0.32
+      let raise
+      if (w.t < riseIn) raise = ease(w.t / riseIn)
+      else if (w.t < dur - riseIn) raise = 1
+      else raise = ease(Math.max(0, (dur - w.t) / riseIn))
+
+      const shakeStart = riseIn
+      const shake = w.t > shakeStart ? Math.sin((w.t - shakeStart) * 12) * 0.35 * raise : 0
+
+      if (shoulderR.current) shoulderR.current.rotation.z = THREE.MathUtils.lerp(0, -1.5, raise)
+      if (elbowR.current) elbowR.current.rotation.z = THREE.MathUtils.lerp(0, -0.5, raise) + shake
+
+      if (w.t > dur) {
+        w.playing = false
+        w.t = 0
+      }
+    } else if (shoulderR.current && elbowR.current) {
+      // reposo: leve balanceo del brazo
+      shoulderR.current.rotation.z = THREE.MathUtils.lerp(shoulderR.current.rotation.z, 0, damp(delta, 3))
+      elbowR.current.rotation.z = THREE.MathUtils.lerp(elbowR.current.rotation.z, Math.sin(t * 0.8) * 0.04, damp(delta, 3))
     }
   })
 
   return (
-    <group>
-      {/* núcleo */}
-      <mesh ref={shell}>
-        <icosahedronGeometry args={[1, 3]} />
-        <meshPhysicalMaterial
-          color="#1a1533"
-          roughness={0.14}
-          metalness={0.3}
-          transmission={0.55}
-          thickness={1.4}
-          clearcoat={1}
-          clearcoatRoughness={0.06}
-          iridescence={0.7}
-          iridescenceIOR={1.5}
-        />
+    <group ref={bot} position={[-0.03, -1.58, -0.055]}>
+      {/* torso y piernas, quietos */}
+      <primitive object={nodes.Torso_Cube001} />
+      <primitive object={nodes.LegL_Cylinder011} />
+      <primitive object={nodes.LowerLegL_Cylinder012} />
+      <primitive object={nodes.FootL_Cylinder014} />
+      <primitive object={nodes.LegR_Cylinder019} />
+      <primitive object={nodes.LowerLegR_Cylinder018} />
+      <primitive object={nodes.FootR_Cylinder017} />
+
+      {/* brazo izquierdo, quieto */}
+      <primitive object={nodes.ShoulderL_Cylinder008} />
+      <primitive object={nodes.ArmL_Cylinder010} />
+      <primitive object={nodes.HandL_Cylinder022} />
+
+      {/* luz de pecho */}
+      <mesh ref={chestLight} position={[0, 2.1, 0.72]}>
+        <sphereGeometry args={[0.13, 20, 20]} />
+        <meshStandardMaterial color="#ffffff" emissive="#22D3EE" emissiveIntensity={1.3} toneMapped={false} />
       </mesh>
 
-      {/* lente / mirada */}
-      <group ref={lens}>
-        <mesh position={[0, 0, 0.94]}>
-          <circleGeometry args={[0.34, 48]} />
-          <meshBasicMaterial color="#07060C" />
-        </mesh>
-        <mesh ref={iris} position={[0, 0, 0.955]}>
-          <circleGeometry args={[0.235, 48]} />
-          <meshStandardMaterial
-            map={irisTex}
-            emissiveMap={irisTex}
-            color="#ffffff"
-            emissive="#22D3EE"
-            emissiveIntensity={1.7}
-            toneMapped={false}
-          />
-        </mesh>
-        <mesh ref={glint} position={[0.075, 0.075, 0.965]}>
-          <circleGeometry args={[0.055, 24]} />
-          <meshBasicMaterial color="#ffffff" toneMapped={false} />
-        </mesh>
+      {/* cabeza, sigue el cursor */}
+      <group ref={head} position={NECK}>
+        <primitive object={nodes.Head_Cylinder} position={neg(NECK)} />
       </group>
 
-      {/* anillos orbitales */}
-      <mesh ref={ringA}>
-        <torusGeometry args={[1.62, 0.012, 8, 128]} />
-        <meshStandardMaterial color="#8B5CF6" emissive="#8B5CF6" emissiveIntensity={2.2} toneMapped={false} />
-      </mesh>
-      <mesh ref={ringB} rotation={[Math.PI / 2.4, 0, 0]}>
-        <torusGeometry args={[1.92, 0.007, 8, 128]} />
-        <meshStandardMaterial color="#C4B5FD" emissive="#C4B5FD" emissiveIntensity={1.5} toneMapped={false} />
-      </mesh>
+      {/* brazo derecho, saluda: hombro -> codo -> mano */}
+      <group ref={shoulderR} position={SHOULDER_R}>
+        <primitive object={nodes.ShoulderR_Cylinder009} position={neg(SHOULDER_R)} />
+        <primitive object={nodes.ArmR_Cylinder013} position={neg(SHOULDER_R)} />
 
-      <mesh ref={halo}>
-        <ringGeometry args={[2.25, 2.55, 96]} />
-        <meshBasicMaterial color="#8B5CF6" transparent opacity={0.12} side={THREE.DoubleSide} />
-      </mesh>
+        <group ref={elbowR} position={ELBOW_LOCAL}>
+          <primitive object={nodes.HandR_Cylinder015} position={neg(ELBOW_R)} />
+        </group>
+      </group>
 
-      {/* partículas satélite */}
-      <Satellites />
+      {/* halo suave bajo el robot */}
+      <mesh position={[0.03, -1.58, 0.055]} rotation={[-Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.9, 1.3, 64]} />
+        <meshBasicMaterial color="#8B5CF6" transparent opacity={0.14} side={THREE.DoubleSide} />
+      </mesh>
     </group>
-  )
-}
-
-function Satellites() {
-  const ref = useRef()
-  const data = useMemo(
-    () =>
-      Array.from({ length: 22 }, () => ({
-        r: 2.1 + Math.random() * 0.9,
-        a: Math.random() * Math.PI * 2,
-        y: (Math.random() - 0.5) * 2.4,
-        s: 0.1 + Math.random() * 0.32,
-      })),
-    []
-  )
-  const dummy = useMemo(() => new THREE.Object3D(), [])
-
-  useFrame((state) => {
-    if (!ref.current) return
-    const t = state.clock.elapsedTime
-    data.forEach((d, i) => {
-      const a = d.a + t * d.s * 0.35
-      dummy.position.set(Math.cos(a) * d.r, d.y + Math.sin(t * 0.6 + i) * 0.14, Math.sin(a) * d.r)
-      dummy.scale.setScalar(0.028 + Math.sin(t * 2 + i) * 0.008)
-      dummy.updateMatrix()
-      ref.current.setMatrixAt(i, dummy.matrix)
-    })
-    ref.current.instanceMatrix.needsUpdate = true
-  })
-
-  return (
-    <instancedMesh ref={ref} args={[null, null, 22]}>
-      <sphereGeometry args={[1, 10, 10]} />
-      <meshStandardMaterial color="#C4B5FD" emissive="#C4B5FD" emissiveIntensity={2} toneMapped={false} />
-    </instancedMesh>
   )
 }
 
@@ -246,6 +190,7 @@ export default function Guide() {
   const reduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const stageRef = useRef()
   const scrollTilt = useRef(0)
+  const [waveTrigger, setWaveTrigger] = useState(0)
 
   useEffect(() => {
     const onScroll = () => {
@@ -262,22 +207,50 @@ export default function Guide() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  // saluda una vez cuando el robot entra en el viewport
+  useEffect(() => {
+    const el = stageRef.current
+    if (!el) return
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          setWaveTrigger((n) => n + 1)
+          io.disconnect()
+        }
+      },
+      { threshold: 0.4 }
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+
   return (
-    <div className="guide-stage" ref={stageRef}>
+    <div
+      className="guide-stage"
+      ref={stageRef}
+      role="button"
+      tabIndex={0}
+      aria-label="Robot guía. Haz clic para saludar."
+      style={{ cursor: 'pointer' }}
+      onClick={() => setWaveTrigger((n) => n + 1)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') setWaveTrigger((n) => n + 1)
+      }}
+    >
       <Canvas
-        camera={{ position: [0, 0, 6.4], fov: 42 }}
+        camera={{ position: [0, 0, 9.4], fov: 42 }}
         dpr={[1, 1.75]}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       >
-        <ambientLight intensity={0.5} />
+        <ambientLight intensity={0.6} />
         <pointLight position={[3, 3, 4]} intensity={26} color="#C4B5FD" distance={18} />
         <pointLight position={[-4, -2, 2]} intensity={20} color="#22D3EE" distance={18} />
 
         {reduced ? (
-          <Core scrollTilt={scrollTilt} />
+          <Robot scrollTilt={scrollTilt} waveTrigger={waveTrigger} />
         ) : (
-          <Float speed={1.35} rotationIntensity={0.32} floatIntensity={0.7}>
-            <Core scrollTilt={scrollTilt} />
+          <Float speed={1.35} rotationIntensity={0.06} floatIntensity={0.2}>
+            <Robot scrollTilt={scrollTilt} waveTrigger={waveTrigger} />
           </Float>
         )}
 
