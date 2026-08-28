@@ -8,6 +8,7 @@ const ACTIVE_LINE_RATIO = 0.3
 
 export default function Checkpoints() {
   const [active, setActive] = useState('z01')
+  const [progress, setProgress] = useState(0)
 
   useEffect(() => {
     const els = zones.map((z) => document.getElementById(z.id)).filter(Boolean)
@@ -44,22 +45,52 @@ export default function Checkpoints() {
     }
   }, [])
 
+  // progreso de scroll para el indicador móvil — el nav lateral se oculta
+  // bajo 780px (poco espacio, gestos táctiles), esto lo reemplaza sin
+  // competir por espacio en pantalla
+  useEffect(() => {
+    const onScroll = () => {
+      const max = document.documentElement.scrollHeight - window.innerHeight
+      setProgress(max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0)
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+    }
+  }, [])
+
+  const activeZone = zones.find((z) => z.id === active) || zones[0]
+
   return (
-    <nav className="checkpoints" aria-label="Zonas del portafolio">
-      {zones.map((z) => (
-        <a
-          key={z.id}
-          href={`#${z.id}`}
-          className={`cp${active === z.id ? ' on' : ''}`}
-          aria-label={`${z.code} ${z.name}`}
-          aria-current={active === z.id ? 'true' : undefined}
-        >
-          <span className="cp-core" />
-          <span className="cp-text">
-            {z.code} · {z.name}
-          </span>
-        </a>
-      ))}
-    </nav>
+    <>
+      <nav className="checkpoints" aria-label="Zonas del portafolio">
+        {zones.map((z) => (
+          <a
+            key={z.id}
+            href={`#${z.id}`}
+            className={`cp${active === z.id ? ' on' : ''}`}
+            aria-label={`${z.code} ${z.name}`}
+            aria-current={active === z.id ? 'true' : undefined}
+          >
+            <span className="cp-core" />
+            <span className="cp-text">
+              {z.code} · {z.name}
+            </span>
+          </a>
+        ))}
+      </nav>
+
+      <div className="mobile-nav" aria-hidden="true">
+        <span className="mobile-nav-label">
+          {activeZone.code} · {activeZone.name}
+        </span>
+        <div className="mobile-nav-track">
+          <div className="mobile-nav-fill" style={{ width: `${progress * 100}%` }} />
+        </div>
+      </div>
+    </>
   )
 }
