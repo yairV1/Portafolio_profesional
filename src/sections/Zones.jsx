@@ -149,11 +149,13 @@ export function Z02() {
             ))}
           </div>
 
-          <Reveal from="up" delay={0.2}>
-            <a className="btn btn-ghost" href={identity.cv} data-cursor>
-              Descargar CV ↓
-            </a>
-          </Reveal>
+          {identity.cv && identity.cv !== '#' && (
+            <Reveal from="up" delay={0.2}>
+              <a className="btn btn-ghost" href={identity.cv} data-cursor>
+                Descargar CV ↓
+              </a>
+            </Reveal>
+          )}
         </div>
       </div>
     </section>
@@ -219,7 +221,7 @@ export function FileCard({ p, onOpen }) {
       onKeyDown={(e) => { if (onOpen && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onOpen() } }}>
       <div className="file-shot">
         {p.imagen ? (
-          <img className="sheen" src={p.imagen} alt="" loading="lazy" />
+          <img className="sheen" src={p.imagen} alt={`Captura de pantalla de ${p.nombre}`} loading="lazy" />
         ) : (
           <div
             className="sheen"
@@ -264,7 +266,9 @@ export function Z04() {
         <div className="file-grid">
           {destacados.map((p, i) => (
             <Reveal key={p.slug} from={i % 2 ? 'right' : 'left'} delay={i * 0.08}>
-              <FileCard p={p} />
+              <Link to={`/expedientes?p=${p.slug}`} className="file-link">
+                <FileCard p={p} />
+              </Link>
             </Reveal>
           ))}
         </div>
@@ -397,6 +401,19 @@ export function Z06() {
             <label>
               Email
               <input name="email" type="email" required placeholder="tu@correo.com" disabled={estado === 'enviando'} />
+            </label>
+            <label>
+              Tipo de proyecto
+              <select name="tipo" required defaultValue="" disabled={estado === 'enviando'}>
+                <option value="" disabled>
+                  Elegí una opción
+                </option>
+                <option value="Proyecto web">Proyecto web</option>
+                <option value="E-commerce">E-commerce</option>
+                <option value="App móvil">App móvil</option>
+                <option value="Sistema o plataforma">Sistema o plataforma</option>
+                <option value="Otro">Otro</option>
+              </select>
             </label>
             <label>
               Mensaje

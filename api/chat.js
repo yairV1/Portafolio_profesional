@@ -12,6 +12,28 @@ const MODEL = 'claude-haiku-4-5'
 const MAX_HISTORY = 20
 const MAX_MESSAGE_CHARS = 2000
 
+// límite por IP en memoria del proceso: suficiente para el tráfico de un
+// portafolio personal. La allowlist de CORS de abajo protege el navegador,
+// pero no una llamada directa server-to-server con un Origin falsificado —
+// esto es lo que de verdad limita el costo de la API en ese caso.
+const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000
+const RATE_LIMIT_MAX = 12
+const hits = new Map()
+
+function isRateLimited(ip) {
+  const now = Date.now()
+  for (const [key, entry] of hits) {
+    if (now > entry.resetAt) hits.delete(key)
+  }
+  const entry = hits.get(ip)
+  if (!entry) {
+    hits.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
+    return false
+  }
+  entry.count += 1
+  return entry.count > RATE_LIMIT_MAX
+}
+
 const SYSTEM_PROMPT = `Eres el asistente virtual del portafolio de Yair Vergara, Desarrollador de Software Full-Stack de Guaduas, Cundinamarca (Colombia). Respondes preguntas de visitantes sobre él, su experiencia y sus proyectos.
 
 Sobre Yair: construye productos digitales rápidos, escalables y cuidados en el detalle. +2 años de experiencia, 20+ proyectos entregados. Disponible para nuevos proyectos.
@@ -48,6 +70,14 @@ export default async function handler(req, res) {
   }
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' })
+    return
+  }
+
+  const ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown')
+    .split(',')[0]
+    .trim()
+  if (isRateLimited(ip)) {
+    res.status(429).json({ error: 'Demasiadas solicitudes. Probá de nuevo en unos minutos.' })
     return
   }
 

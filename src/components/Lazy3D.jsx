@@ -25,8 +25,12 @@ function Placeholder({ tall }) {
   )
 }
 
-/* Solo monta el canvas cuando la sección está cerca del viewport.
-   Evita dos contextos WebGL corriendo a la vez. */
+/* Solo monta cada canvas cuando su propia sección está cerca del viewport,
+   en vez de arrancar los dos contextos WebGL desde la carga inicial. Cada
+   instancia decide por su cuenta (no hay exclusión mutua entre ellas): si
+   Z-01 y Z-02 están cerca del viewport a la vez, ambas escenas pueden
+   quedar montadas juntas — es intencional, evita que una de las dos
+   desaparezca mientras el usuario todavía la tiene a la vista. */
 function WhenNear({ children, tall }) {
   const ref = useRef(null)
   const [near, setNear] = useState(false)

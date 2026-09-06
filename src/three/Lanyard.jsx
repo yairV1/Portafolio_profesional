@@ -4,7 +4,7 @@ import { Canvas, extend, useFrame, useThree } from '@react-three/fiber'
 import { ContactShadows, Environment, Lightformer } from '@react-three/drei'
 import { BallCollider, CuboidCollider, Physics, RigidBody, useRopeJoint, useSphericalJoint } from '@react-three/rapier'
 import { MeshLineGeometry, MeshLineMaterial } from 'meshline'
-import { identity } from '../data/content'
+import { identity, capacidades, contacto } from '../data/content'
 
 extend({ MeshLineGeometry, MeshLineMaterial })
 
@@ -163,6 +163,123 @@ function drawCardFace(img) {
   return t
 }
 
+/* ---------- textura del reverso: perfil técnico + contacto ---------- */
+function drawCardBack() {
+  const W = 620
+  const H = 880
+  const c = document.createElement('canvas')
+  c.width = W
+  c.height = H
+  const g = c.getContext('2d')
+
+  const bg = g.createLinearGradient(0, 0, W, H)
+  bg.addColorStop(0, '#191533')
+  bg.addColorStop(0.55, '#100E1F')
+  bg.addColorStop(1, '#1d1640')
+  g.fillStyle = bg
+  g.fillRect(0, 0, W, H)
+
+  // banda superior, igual que el frente
+  g.fillStyle = 'rgba(139,92,246,0.18)'
+  g.fillRect(0, 0, W, 96)
+  g.strokeStyle = 'rgba(196,181,253,0.35)'
+  g.lineWidth = 2
+  g.beginPath()
+  g.moveTo(0, 96)
+  g.lineTo(W, 96)
+  g.stroke()
+
+  g.fillStyle = '#C4B5FD'
+  g.font = '500 22px "JetBrains Mono", monospace'
+  g.textBaseline = 'middle'
+  g.fillText('PERFIL TÉCNICO', 44, 50)
+  g.textAlign = 'right'
+  g.fillStyle = '#22D3EE'
+  g.fillText('REVERSO', W - 44, 50)
+  g.textAlign = 'left'
+
+  // ranura del clip, igual posición que el frente
+  g.fillStyle = 'rgba(0,0,0,0.55)'
+  g.beginPath()
+  g.roundRect(W / 2 - 62, 24, 124, 20, 10)
+  g.fill()
+
+  // nombre completo + rol
+  g.fillStyle = '#F2F0FA'
+  g.font = '600 46px "Clash Display", system-ui, sans-serif'
+  g.fillText(`${identity.nombre} ${identity.apellido || ''}`.trim(), 60, 170)
+
+  g.fillStyle = '#8B5CF6'
+  g.fillRect(60, 198, 74, 3)
+
+  g.fillStyle = '#8A87A6'
+  g.font = '500 22px "Satoshi", system-ui, sans-serif'
+  g.fillText(identity.rol, 60, 234)
+
+  // nivel por área, tomado de las mismas capacidades que ya se muestran en Z-03
+  g.fillStyle = '#5D5A77'
+  g.font = '500 15px "JetBrains Mono", monospace'
+  g.fillText('NIVEL DE ACCESO POR ÁREA', 60, 284)
+
+  capacidades.slice(0, 4).forEach((cap, i) => {
+    const rowY = 326 + i * 60
+    g.fillStyle = '#C4B5FD'
+    g.font = '600 23px "Clash Display", system-ui, sans-serif'
+    g.fillText(cap.titulo, 60, rowY)
+
+    const barX = 60
+    const barY = rowY + 18
+    const barW = W - 120
+    const barH = 6
+    g.fillStyle = 'rgba(255,255,255,0.08)'
+    g.beginPath()
+    g.roundRect(barX, barY, barW, barH, 3)
+    g.fill()
+    const grad = g.createLinearGradient(barX, 0, barX + barW, 0)
+    grad.addColorStop(0, '#8B5CF6')
+    grad.addColorStop(1, '#22D3EE')
+    g.fillStyle = grad
+    g.beginPath()
+    g.roundRect(barX, barY, barW * (cap.nivel / 100), barH, 3)
+    g.fill()
+  })
+
+  // contacto
+  g.fillStyle = '#5D5A77'
+  g.font = '500 15px "JetBrains Mono", monospace'
+  g.fillText('CONTACTO', 60, 572)
+
+  contacto.redes.slice(0, 2).forEach((r, i) => {
+    const ly = 610 + i * 36
+    g.fillStyle = '#F2F0FA'
+    g.font = '500 21px "Satoshi", system-ui, sans-serif'
+    g.fillText(r.n, 60, ly)
+    g.fillStyle = '#5D5A77'
+    g.font = '400 15px "JetBrains Mono", monospace'
+    g.fillText(r.u.replace('https://', '').replace('www.', ''), 190, ly)
+  })
+
+  // código de barras, misma posición que el frente para simetría visual
+  let bx = 60
+  const seed = 11
+  for (let i = 0; i < 46; i++) {
+    const w = ((i * seed) % 4) + 1.5
+    g.fillStyle = i % 3 === 0 ? 'rgba(196,181,253,0.75)' : 'rgba(255,255,255,0.35)'
+    g.fillRect(bx, 762, w, 44)
+    bx += w + 5
+    if (bx > W - 70) break
+  }
+
+  g.fillStyle = '#5D5A77'
+  g.font = '400 19px "JetBrains Mono", monospace'
+  g.fillText(identity.handle, 60, 838)
+
+  const t = new THREE.CanvasTexture(c)
+  t.colorSpace = THREE.SRGBColorSpace
+  t.anisotropy = 8
+  return t
+}
+
 function useCardTexture(src) {
   const [tex, setTex] = useState(null)
   useEffect(() => {
@@ -189,7 +306,7 @@ function useCardTexture(src) {
 }
 
 /* ---------- el carné colgante ---------- */
-function Band({ maxSpeed = 50, minSpeed = 10 }) {
+function Band({ maxSpeed = 50, minSpeed = 10, reduced, flipTrigger }) {
   const band = useRef()
   const fixed = useRef()
   const j1 = useRef()
@@ -199,8 +316,9 @@ function Band({ maxSpeed = 50, minSpeed = 10 }) {
 
   const vec = useMemo(() => new THREE.Vector3(), [])
   const ang = useMemo(() => new THREE.Vector3(), [])
-  const rot = useMemo(() => new THREE.Vector3(), [])
   const dir = useMemo(() => new THREE.Vector3(), [])
+  const q = useMemo(() => new THREE.Quaternion(), [])
+  const euler = useMemo(() => new THREE.Euler(), [])
 
   const segmentProps = { type: 'dynamic', canSleep: true, colliders: false, angularDamping: 1.8, linearDamping: 1.8 }
 
@@ -208,9 +326,29 @@ function Band({ maxSpeed = 50, minSpeed = 10 }) {
   const [curve] = useState(() => new THREE.CatmullRomCurve3([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()]))
   const [dragged, drag] = useState(false)
   const [hovered, hover] = useState(false)
+  const [flipped, setFlipped] = useState(false)
+  const downPos = useRef({ x: 0, y: 0 })
 
   const bandTex = useMemo(() => makeBandTexture(), [])
   const faceTex = useCardTexture(identity.foto)
+  const backTex = useMemo(() => drawCardBack(), [])
+
+  // el mismo giro se puede disparar por teclado (ver Lanyard(), más abajo,
+  // que sube flipTrigger en el wrapper accesible) o con un tap/click corto
+  // sobre el carné — ambos caminos convergen en este estado
+  useEffect(() => {
+    if (!flipTrigger) return
+    setFlipped((f) => !f)
+  }, [flipTrigger])
+
+  // con reduced-motion la física está en pausa (paused={reduced} en
+  // <Physics>, en Lanyard()) así que un torque no movería nada: en ese caso
+  // el giro se aplica una sola vez, directo, sin animar el balanceo
+  useEffect(() => {
+    if (!reduced || !card.current) return
+    q.setFromEuler(euler.set(0, flipped ? Math.PI : 0, 0))
+    card.current.setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }, true)
+  }, [flipped, reduced])
 
   useRopeJoint(fixed, j1, [[0, 0, 0], [0, 0, 0], 1])
   useRopeJoint(j1, j2, [[0, 0, 0], [0, 0, 0], 1])
@@ -263,8 +401,20 @@ function Band({ maxSpeed = 50, minSpeed = 10 }) {
     band.current?.geometry.setPoints(curve.getPoints(32))
 
     ang.copy(card.current.angvel())
-    rot.copy(card.current.rotation())
-    card.current.setAngvel({ x: ang.x, y: ang.y - rot.y * 0.25, z: ang.z }, true)
+    if (reduced) {
+      card.current.setAngvel({ x: ang.x, y: 0, z: ang.z }, true)
+    } else {
+      // resorte angular hacia 0° o 180° según `flipped` — reemplaza el
+      // antiguo "vuelve siempre al frente" para poder sostener también el
+      // reverso como destino estable
+      const r = card.current.rotation()
+      q.set(r.x, r.y, r.z, r.w)
+      euler.setFromQuaternion(q, 'YXZ')
+      const target = flipped ? Math.PI : 0
+      let diff = target - euler.y
+      diff -= Math.PI * 2 * Math.round(diff / (Math.PI * 2))
+      card.current.setAngvel({ x: ang.x, y: ang.y + diff * 0.32, z: ang.z }, true)
+    }
   })
 
   curve.curveType = 'chordal'
@@ -293,13 +443,31 @@ function Band({ maxSpeed = 50, minSpeed = 10 }) {
           <group
             scale={1}
             position={[0, -1.2, -0.05]}
-            onPointerOver={() => hover(true)}
-            onPointerOut={() => hover(false)}
+            onPointerOver={(e) => {
+              e.stopPropagation()
+              hover(true)
+            }}
+            onPointerOut={(e) => {
+              e.stopPropagation()
+              hover(false)
+            }}
             onPointerUp={(e) => {
+              // el grupo tiene varias mallas apiladas en el mismo eje (caja,
+              // cara, reverso, halo) — sin esto, un solo click dispara el
+              // handler una vez por cada malla que atraviesa el rayo
+              e.stopPropagation()
               e.target?.releasePointerCapture?.(e.pointerId)
               drag(false)
+              // un tap (poco movimiento entre down y up) gira el carné; si
+              // hubo arrastre real, no — evita que soltar el drag dispare
+              // un giro accidental
+              const dx = e.clientX - downPos.current.x
+              const dy = e.clientY - downPos.current.y
+              if (Math.hypot(dx, dy) < 6) setFlipped((f) => !f)
             }}
             onPointerDown={(e) => {
+              e.stopPropagation()
+              downPos.current = { x: e.clientX, y: e.clientY }
               e.target?.setPointerCapture?.(e.pointerId)
               drag(new THREE.Vector3().copy(e.point).sub(vec.copy(card.current.translation())))
             }}
@@ -332,7 +500,31 @@ function Band({ maxSpeed = 50, minSpeed = 10 }) {
               />
             </mesh>
 
-            {/* borde luminoso */}
+            {/* reverso: perfil técnico + contacto. Rotado 180° en su propio
+                espacio local para que, al sumarse al giro físico del carné,
+                el texto quede legible (no espejado) cuando queda de frente
+                a cámara — dos giros de 180° se cancelan entre sí. Va a
+                -0.021 (más lejos que el halo, ver abajo) porque un giro de
+                180° invierte el eje z local: lo más "hacia atrás" hoy es lo
+                que termina más cerca de cámara una vez que la tarjeta gira. */}
+            <mesh position={[0, 0, -0.021]} rotation={[0, Math.PI, 0]}>
+              <planeGeometry args={[1.56, 2.21]} />
+              <meshPhysicalMaterial
+                map={backTex}
+                color="#ffffff"
+                roughness={0.55}
+                metalness={0.05}
+                clearcoat={0.35}
+                clearcoatRoughness={0.45}
+                envMapIntensity={0.5}
+                transparent
+              />
+            </mesh>
+
+            {/* borde luminoso — queda igual que antes de agregar el
+                reverso; por la misma inversión de eje explicada arriba,
+                dejarlo en -0.019 hace que asome como halo detrás del
+                reverso en vez de taparlo */}
             <mesh position={[0, 0, -0.019]}>
               <planeGeometry args={[1.68, 2.33]} />
               <meshBasicMaterial color="#8B5CF6" transparent opacity={0.16} />
@@ -372,9 +564,22 @@ function Band({ maxSpeed = 50, minSpeed = 10 }) {
 
 export default function Lanyard() {
   const reduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const [flipTrigger, setFlipTrigger] = useState(0)
+  const flip = () => setFlipTrigger((n) => n + 1)
 
   return (
-    <div className="lanyard-stage">
+    <div
+      className="lanyard-stage"
+      role="button"
+      tabIndex={0}
+      aria-label="Credencial de acceso. Presiona Enter para girarla y ver el reverso."
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          flip()
+        }
+      }}
+    >
       <Canvas
         camera={{ position: [0, 0, 13], fov: 25 }}
         dpr={[1, 1.75]}
@@ -386,7 +591,7 @@ export default function Lanyard() {
         <pointLight position={[5, 1, 4]} intensity={12} color="#22D3EE" distance={16} />
 
         <Physics gravity={[0, -30, 0]} timeStep={1 / 60} paused={reduced}>
-          <Band />
+          <Band reduced={reduced} flipTrigger={flipTrigger} />
         </Physics>
 
         <ContactShadows position={[0, -2.6, 0]} opacity={0.5} scale={12} blur={2.8} far={6} resolution={512} color="#050308" />
@@ -398,7 +603,7 @@ export default function Lanyard() {
           <Lightformer intensity={3.5} color="#ffffff" position={[-8, 4, 12]} scale={[12, 12, 1]} />
         </Environment>
       </Canvas>
-      <span className="drag-hint">Arrastra la credencial</span>
+      <span className="drag-hint">Arrastra la credencial · toca para girarla</span>
     </div>
   )
 }

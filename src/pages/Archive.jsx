@@ -1,14 +1,17 @@
 import { useMemo, useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import Reveal from '../components/Reveal'
 import { FileCard } from '../sections/Zones'
 import { expedientes } from '../data/content'
 
+const hasLink = (url) => Boolean(url) && url !== '#'
+
 export default function Archive() {
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('Todos')
   const [open, setOpen] = useState(null)
+  const [searchParams] = useSearchParams()
 
   const cats = useMemo(() => ['Todos', ...new Set(expedientes.map((p) => p.categoria))], [])
 
@@ -28,6 +31,16 @@ export default function Archive() {
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [])
+
+  // deep-link desde las tarjetas destacadas de la home (/expedientes?p=slug):
+  // abre directo el expediente correspondiente en vez de dejar que el
+  // visitante lo busque de nuevo en la grilla completa
+  useEffect(() => {
+    const slug = searchParams.get('p')
+    if (!slug) return
+    const match = expedientes.find((p) => p.slug === slug)
+    if (match) setOpen(match)
+  }, [searchParams])
 
   useEffect(() => {
     const esc = (e) => e.key === 'Escape' && setOpen(null)
@@ -121,6 +134,13 @@ export default function Archive() {
                 ))}
               </div>
 
+              {open.problema && (
+                <div className="sheet-problema">
+                  <h5>Problema</h5>
+                  <p>{open.problema}</p>
+                </div>
+              )}
+
               <div className="sheet-cols">
                 <div>
                   <h5>Arquitectura</h5>
@@ -140,14 +160,20 @@ export default function Archive() {
                 </div>
               </div>
 
-              <div className="sheet-links">
-                <a className="btn btn-solid" href={open.demo} target="_blank" rel="noreferrer" data-cursor>
-                  Ver demo ↗
-                </a>
-                <a className="btn btn-ghost" href={open.repo} target="_blank" rel="noreferrer" data-cursor>
-                  Código en GitHub
-                </a>
-              </div>
+              {(hasLink(open.demo) || hasLink(open.repo)) && (
+                <div className="sheet-links">
+                  {hasLink(open.demo) && (
+                    <a className="btn btn-solid" href={open.demo} target="_blank" rel="noreferrer" data-cursor>
+                      Ver demo ↗
+                    </a>
+                  )}
+                  {hasLink(open.repo) && (
+                    <a className="btn btn-ghost" href={open.repo} target="_blank" rel="noreferrer" data-cursor>
+                      Código en GitHub
+                    </a>
+                  )}
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}
