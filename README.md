@@ -6,7 +6,7 @@ Experiencia interactiva 3D. React + Three.js + física real.
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173
+npm run dev      # http://localhost:5173/Portafolio_prosonal/#/
 npm run build    # genera /dist listo para subir
 ```
 

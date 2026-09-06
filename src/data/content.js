@@ -13,8 +13,8 @@ export const identity = {
   descripcion:
     'Construyo productos digitales rápidos, escalables y cuidados al detalle. Me interesa el punto exacto donde el código limpio y el buen diseño se encuentran.',
   disponible: 'Disponible para proyectos',
-  cv: '#', // ruta a tu CV en /public, ej: '/cv-yair.pdf'
-  foto: `${import.meta.env.BASE_URL}foto.png`,
+  cv: '#', // ruta a tu CV en /public, ej: '/cv-yair.pdf' — mientras valga '#' el botón de descarga se oculta
+  foto: `${import.meta.env.BASE_URL}foto.webp`,
   stackHero: ['React', 'TypeScript', 'Laravel', 'Node.js', 'MySQL', 'Three.js'],
 }
 
@@ -22,10 +22,9 @@ export const zones = [
   { id: 'z01', code: 'Z-01', name: 'Recepción' },
   { id: 'z02', code: 'Z-02', name: 'Perfil' },
   { id: 'z03', code: 'Z-03', name: 'Capacidades' },
-  { id: 'z04', code: 'Z-04', name: 'Trayectoria' },
-  { id: 'z05', code: 'Z-05', name: 'Expedientes' },
-  { id: 'z06', code: 'Z-06', name: 'Fuera de horario' },
-  { id: 'z07', code: 'Z-07', name: 'Contacto' },
+  { id: 'z04', code: 'Z-04', name: 'Expedientes' },
+  { id: 'z05', code: 'Z-05', name: 'Fuera de horario' },
+  { id: 'z06', code: 'Z-06', name: 'Contacto' },
 ]
 
 export const perfil = {
@@ -35,7 +34,7 @@ export const perfil = {
     'Me muevo con la misma comodidad en una consulta SQL que en una animación de entrada. Creo que el detalle no es un lujo — es lo que separa un producto usable de uno que la gente disfruta usar.',
   ],
   stats: [
-    { n: '+3', l: 'Años construyendo' },
+    { n: '+2', l: 'Años construyendo' },
     { n: '20+', l: 'Proyectos entregados' },
     { n: '100%', l: 'Compromiso' },
     { n: '∞', l: 'Por aprender' },
@@ -43,47 +42,16 @@ export const perfil = {
 }
 
 export const capacidades = [
-  { titulo: 'Frontend', nivel: 92, items: ['React', 'TypeScript', 'JavaScript', 'Tailwind', 'HTML5', 'CSS3'] },
-  { titulo: 'Backend', nivel: 85, items: ['Laravel', 'PHP', 'Node.js', 'Python', 'REST'] },
-  { titulo: 'Datos', nivel: 80, items: ['MySQL', 'PostgreSQL', 'Prisma', 'Modelado'] },
-  { titulo: 'Infraestructura', nivel: 70, items: ['Git', 'Docker', 'Vercel', 'CI/CD'] },
-  { titulo: 'Interfaz', nivel: 78, items: ['Figma', 'UI/UX', 'Responsive', 'Accesibilidad'] },
-  { titulo: 'Movimiento', nivel: 74, items: ['GSAP', 'Framer Motion', 'Three.js', 'Lenis'] },
-]
-
-export const trayectoria = [
-  {
-    cuando: '2024 — Presente',
-    cargo: 'Desarrollador Full-Stack',
-    donde: '[Nombre de la empresa]',
-    texto: 'Desarrollo y mantenimiento de aplicaciones web completas, desde el modelado de datos hasta la interfaz final.',
-    tags: ['Laravel', 'React', 'MySQL'],
-  },
-  {
-    cuando: '2023 — 2024',
-    cargo: 'Desarrollador Frontend',
-    donde: '[Nombre de la empresa]',
-    texto: 'Construcción de interfaces, integración con APIs y optimización de rendimiento y accesibilidad.',
-    tags: ['React', 'TypeScript', 'Tailwind'],
-  },
-  {
-    cuando: '2022 — 2023',
-    cargo: 'Practicante de Desarrollo',
-    donde: '[Nombre de la institución]',
-    texto: 'Primeros módulos en producción, control de versiones en equipo y bases sólidas de backend.',
-    tags: ['PHP', 'MySQL', 'Git'],
-  },
-  {
-    cuando: '2021 — 2022',
-    cargo: 'Formación técnica',
-    donde: '[Nombre de la institución]',
-    texto: 'Fundamentos de programación, estructuras de datos y bases de datos relacionales.',
-    tags: ['Algoritmos', 'SQL', 'POO'],
-  },
+  { titulo: 'Frontend', nivel: 92, items: ['React', 'Interfaces responsive', 'Componentes reutilizables', 'TypeScript', 'Consumo de APIs'] },
+  { titulo: 'Backend', nivel: 85, items: ['Laravel', 'Roles y permisos', 'APIs REST', 'Node.js', 'Lógica de negocio en servidor'] },
+  { titulo: 'Datos', nivel: 80, items: ['MySQL', 'Modelado relacional', 'Consultas optimizadas', 'PostgreSQL'] },
+  { titulo: 'Infraestructura', nivel: 70, items: ['Git', 'Despliegues en Vercel', 'Docker', 'Integración continua'] },
+  { titulo: 'Interfaz', nivel: 78, items: ['Figma', 'Diseño responsive', 'Accesibilidad', 'Prototipado UI/UX'] },
+  { titulo: 'Movimiento', nivel: 74, items: ['GSAP', 'Animaciones de scroll', 'Three.js', 'Framer Motion'] },
 ]
 
 /* Los 3 primeros aparecen destacados en la home. Todos aparecen en /expedientes.
-   imagen: ruta a una captura del proyecto en /public (ej. '/proyectos/sistema-escolar.png').
+   imagen: ruta a una captura del proyecto en /public (ej. '/proyectos/sistema-escolar.webp').
    Si se deja vacío, se usa el degradado de `tono` como placeholder. */
 export const expedientes = [
   {
@@ -93,8 +61,10 @@ export const expedientes = [
     estado: 'live',
     categoria: 'Plataforma',
     resumen: 'Gestión académica completa con roles, evaluaciones, asistencia y reportes en tiempo real.',
+    problema:
+      'La institución llevaba evaluaciones, asistencia y reportes en sistemas o planillas desconectadas entre sí, sin un control de acceso claro según el rol de cada usuario (docente, administrativo, directivo).',
     stack: ['Laravel', 'MySQL', 'Vue.js'],
-    imagen: '',
+    imagen: `${import.meta.env.BASE_URL}proyectos/sistema-escolar.webp`,
     tono: ['#3B1D8F', '#7C3AED'],
     demo: '#',
     repo: '#',
@@ -116,8 +86,10 @@ export const expedientes = [
     estado: 'live',
     categoria: 'Plataforma',
     resumen: 'Sistema veterinario para pacientes, citas, historias clínicas e inventario de insumos.',
+    problema:
+      'La clínica agendaba citas y llevaba el historial clínico de cada paciente por separado, sin control de solapamiento de horarios ni visibilidad del inventario de insumos médicos disponible.',
     stack: ['Laravel', 'MySQL', 'Alpine.js'],
-    imagen: '',
+    imagen: `${import.meta.env.BASE_URL}proyectos/vetwilling.webp`,
     tono: ['#0E3B4C', '#22D3EE'],
     demo: '#',
     repo: '#',
@@ -138,6 +110,8 @@ export const expedientes = [
     estado: 'live',
     categoria: 'E-commerce',
     resumen: 'Tienda en línea para venta de productos personalizados con configurador de bordado.',
+    problema:
+      'El negocio vendía productos con bordado personalizado pero no tenía forma de mostrar en línea cómo quedaría cada diseño antes de la compra, ni de centralizar la gestión de pedidos.',
     stack: ['PHP', 'MySQL', 'JavaScript'],
     imagen: '',
     tono: ['#4A1060', '#DB2777'],
@@ -157,6 +131,8 @@ export const expedientes = [
     estado: 'arch',
     categoria: 'Herramienta',
     resumen: 'Aplicación de organización personal con recordatorios, etiquetas y estadísticas de hábitos.',
+    problema:
+      'Las listas de tareas genéricas no mostraban recordatorios programados ni daban ninguna visibilidad sobre el progreso de un hábito a lo largo del tiempo.',
     stack: ['React', 'Node.js', 'PostgreSQL'],
     imagen: '',
     tono: ['#101A3A', '#8B5CF6'],
@@ -172,6 +148,8 @@ export const expedientes = [
     estado: 'live',
     categoria: 'Experimento',
     resumen: 'Experiencia 3D con física real, scroll cinematográfico y un concepto de credencial de acceso.',
+    problema:
+      'Un portafolio que solo lista tecnologías no demuestra qué tan bien se dominan — necesitaba que la propia interacción (física, render 3D, animación) fuera la prueba de lo que sé construir.',
     stack: ['React', 'Three.js', 'GSAP'],
     imagen: '',
     tono: ['#1B1140', '#C4B5FD'],

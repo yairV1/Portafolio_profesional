@@ -1,13 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Reveal from '../components/Reveal'
 import { LazyLanyard, LazyGuide } from '../components/Lazy3D'
-import { identity, perfil, capacidades, trayectoria, expedientes, fueraDeHorario, contacto, zones } from '../data/content'
-
-gsap.registerPlugin(ScrollTrigger)
+import { identity, perfil, capacidades, expedientes, fueraDeHorario, contacto, zones } from '../data/content'
 
 function Tag({ i }) {
   const z = zones[i]
@@ -85,7 +81,7 @@ export function Z01() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.1, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
           >
-            <a className="btn btn-solid" href="#z05" data-cursor>
+            <a className="btn btn-solid" href="#z04" data-cursor>
               Ver expedientes
             </a>
             <a className="btn btn-ghost" href="#z02" data-cursor>
@@ -153,11 +149,13 @@ export function Z02() {
             ))}
           </div>
 
-          <Reveal from="up" delay={0.2}>
-            <a className="btn btn-ghost" href={identity.cv} data-cursor>
-              Descargar CV ↓
-            </a>
-          </Reveal>
+          {identity.cv && identity.cv !== '#' && (
+            <Reveal from="up" delay={0.2}>
+              <a className="btn btn-ghost" href={identity.cv} data-cursor>
+                Descargar CV ↓
+              </a>
+            </Reveal>
+          )}
         </div>
       </div>
     </section>
@@ -165,8 +163,6 @@ export function Z02() {
 }
 
 /* ================= Z-03 CAPACIDADES ================= */
-const dirs = ['left', 'up', 'right', 'right', 'down', 'left']
-
 export function Z03() {
   return (
     <section id="z03" className="zone">
@@ -181,13 +177,28 @@ export function Z03() {
           </p>
         </Reveal>
 
-        <div className="cap-grid">
+        <div className="cap-list">
           {capacidades.map((c, i) => (
-            <Reveal key={c.titulo} from={dirs[i % dirs.length]} delay={i * 0.07}>
-              <div className="cap" data-cursor>
-                <h4>{c.titulo}</h4>
-                <div className="lvl">
-                  <b style={{ width: `${c.nivel}%` }} />
+            <Reveal key={c.titulo} from="up" delay={i * 0.06}>
+              <div className="cap-row" data-cursor>
+                <span className="cap-scan" aria-hidden="true" />
+                <span className="cap-watermark" aria-hidden="true">
+                  {c.titulo}
+                </span>
+                <div className="cap-row-top">
+                  <div className="cap-row-id">
+                    <span className="cap-idx">{`C.0${i + 1}`}</span>
+                    <h4>{c.titulo}</h4>
+                  </div>
+                  <div className="lvl">
+                    <motion.b
+                      style={{ transformOrigin: 'left' }}
+                      initial={{ scaleX: 0 }}
+                      whileInView={{ scaleX: c.nivel / 100 }}
+                      viewport={{ once: true, margin: '-10% 0px -10% 0px' }}
+                      transition={{ duration: 1.1, delay: 0.15 + i * 0.05, ease: [0.16, 1, 0.3, 1] }}
+                    />
+                  </div>
                 </div>
                 <ul>
                   {c.items.map((it) => (
@@ -203,80 +214,14 @@ export function Z03() {
   )
 }
 
-/* ================= Z-04 TRAYECTORIA (scroll horizontal) ================= */
-export function Z04() {
-  const pin = useRef(null)
-  const rail = useRef(null)
-
-  useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    if (window.innerWidth < 780) return
-
-    const ctx = gsap.context(() => {
-      const r = rail.current
-      if (!r) return
-      const distance = () => Math.max(0, r.scrollWidth - window.innerWidth + 120)
-
-      gsap.to(r, {
-        x: () => -distance(),
-        ease: 'none',
-        scrollTrigger: {
-          trigger: pin.current,
-          start: 'top top',
-          end: () => '+=' + distance(),
-          scrub: 0.8,
-          pin: true,
-          anticipatePin: 1,
-          invalidateOnRefresh: true,
-        },
-      })
-    }, pin)
-
-    return () => ctx.revert()
-  }, [])
-
-  return (
-    <section id="z04" className="zone track-pin" ref={pin}>
-      <div className="zone-inner">
-        <Reveal from="mask">
-          <Tag i={3} />
-          <h2 className="zt">
-            El registro de <em>acceso</em>
-          </h2>
-        </Reveal>
-      </div>
-
-      <div
-        className="track-rail"
-        ref={rail}
-        style={{ paddingLeft: 'max(0px, calc((100vw - 1240px)/2))', overflowX: 'auto' }}
-      >
-        {trayectoria.map((t) => (
-          <article className="track-card" key={t.cuando} data-cursor>
-            <span className="track-when">{t.cuando}</span>
-            <h4>{t.cargo}</h4>
-            <span className="track-where">{t.donde}</span>
-            <p>{t.texto}</p>
-            <div className="track-tags">
-              {t.tags.map((x) => (
-                <span key={x}>{x}</span>
-              ))}
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-/* ================= Z-05 EXPEDIENTES ================= */
+/* ================= Z-04 EXPEDIENTES ================= */
 export function FileCard({ p, onOpen }) {
   return (
     <article className="file" data-cursor onClick={onOpen} role={onOpen ? 'button' : undefined} tabIndex={onOpen ? 0 : undefined}
       onKeyDown={(e) => { if (onOpen && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onOpen() } }}>
       <div className="file-shot">
         {p.imagen ? (
-          <img className="sheen" src={p.imagen} alt="" loading="lazy" />
+          <img className="sheen" src={p.imagen} alt={`Captura de pantalla de ${p.nombre}`} loading="lazy" />
         ) : (
           <div
             className="sheen"
@@ -306,23 +251,24 @@ export function FileCard({ p, onOpen }) {
   )
 }
 
-export function Z05() {
-  const destacados = expedientes.slice(0, 4)
+export function Z04() {
+  const destacados = expedientes.slice(0, 2)
   return (
-    <section id="z05" className="zone">
+    <section id="z04" className="zone">
       <div className="zone-inner">
         <Reveal from="mask">
-          <Tag i={4} />
-          <h2 className="zt">
-            Trabajo <em>archivado</em>
-          </h2>
-          <p className="lede">Cuatro expedientes destacados. El archivo completo está una puerta más allá.</p>
+          <Tag i={3} />
+          <p className="z5-intro">
+            <em>Proyectos y aplicaciones</em> construidos en el camino.
+          </p>
         </Reveal>
 
         <div className="file-grid">
           {destacados.map((p, i) => (
             <Reveal key={p.slug} from={i % 2 ? 'right' : 'left'} delay={i * 0.08}>
-              <FileCard p={p} />
+              <Link to={`/expedientes?p=${p.slug}`} className="file-link">
+                <FileCard p={p} />
+              </Link>
             </Reveal>
           ))}
         </div>
@@ -342,13 +288,13 @@ export function Z05() {
   )
 }
 
-/* ================= Z-06 FUERA DE HORARIO ================= */
-export function Z06() {
+/* ================= Z-05 FUERA DE HORARIO ================= */
+export function Z05() {
   return (
-    <section id="z06" className="zone">
+    <section id="z05" className="zone">
       <div className="zone-inner">
         <Reveal from="mask">
-          <Tag i={5} />
+          <Tag i={4} />
           <h2 className="zt">
             Cuando la credencial <em>se guarda</em>
           </h2>
@@ -371,8 +317,8 @@ export function Z06() {
   )
 }
 
-/* ================= Z-07 CONTACTO ================= */
-export function Z07() {
+/* ================= Z-06 CONTACTO ================= */
+export function Z06() {
   const [estado, setEstado] = useState('idle')
 
   const enviar = async (e) => {
@@ -400,11 +346,11 @@ export function Z07() {
   }
 
   return (
-    <section id="z07" className="zone">
+    <section id="z06" className="zone">
       <div className="zone-inner z7-grid">
         <div>
           <Reveal from="mask">
-            <Tag i={6} />
+            <Tag i={5} />
             <h2 className="zt">
               Solicitar <em>acceso</em>
             </h2>
@@ -455,6 +401,19 @@ export function Z07() {
             <label>
               Email
               <input name="email" type="email" required placeholder="tu@correo.com" disabled={estado === 'enviando'} />
+            </label>
+            <label>
+              Tipo de proyecto
+              <select name="tipo" required defaultValue="" disabled={estado === 'enviando'}>
+                <option value="" disabled>
+                  Elegí una opción
+                </option>
+                <option value="Proyecto web">Proyecto web</option>
+                <option value="E-commerce">E-commerce</option>
+                <option value="App móvil">App móvil</option>
+                <option value="Sistema o plataforma">Sistema o plataforma</option>
+                <option value="Otro">Otro</option>
+              </select>
             </label>
             <label>
               Mensaje

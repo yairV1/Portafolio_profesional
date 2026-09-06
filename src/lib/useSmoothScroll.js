@@ -1,15 +1,33 @@
 import { useEffect } from 'react'
-import Lenis from 'lenis'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { getLenis, destroyLenis } from './lenisSingleton'
 
 gsap.registerPlugin(ScrollTrigger)
 
 export default function useSmoothScroll() {
+  // marca <html> mientras hay scroll activo — evita que filas que quedan
+  // bajo el cursor (quieto) disparen :hover solo por el reflow del scroll
   useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const root = document.documentElement
+    let timer
+    const onScroll = () => {
+      root.classList.add('is-scrolling')
+      clearTimeout(timer)
+      timer = setTimeout(() => root.classList.remove('is-scrolling'), 120)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      clearTimeout(timer)
+      root.classList.remove('is-scrolling')
+    }
+  }, [])
 
-    const lenis = new Lenis({ duration: 1.15, lerp: 0.085, smoothWheel: true })
+  useEffect(() => {
+    const lenis = getLenis()
+    if (!lenis) return
+
     lenis.on('scroll', ScrollTrigger.update)
 
     const raf = (time) => lenis.raf(time * 1000)
@@ -20,7 +38,10 @@ export default function useSmoothScroll() {
       const a = e.target.closest?.('a[href^="#"]')
       if (!a) return
       const id = a.getAttribute('href')
-      if (id.length < 2) return
+      // con HashRouter, los links de ruta también empiezan con "#" (ej.
+      // "#/expedientes?p=slug") — solo interceptamos anclas simples de la
+      // misma página, no rutas, para no pasarle eso a querySelector
+      if (!/^#[\w-]+$/.test(id)) return
       const el = document.querySelector(id)
       if (!el) return
       e.preventDefault()
@@ -31,7 +52,7 @@ export default function useSmoothScroll() {
     return () => {
       document.removeEventListener('click', onClick)
       gsap.ticker.remove(raf)
-      lenis.destroy()
+      destroyLenis()
       ScrollTrigger.getAll().forEach((t) => t.kill())
     }
   }, [])
