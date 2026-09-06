@@ -2,7 +2,6 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  base: '/Portafolio_prosonal/',
   plugins: [react()],
   build: {
     chunkSizeWarningLimit: 1600,
