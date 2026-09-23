@@ -2,20 +2,14 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  base: '/Portafolio_prosonal/',
+  base: './',
   plugins: [react()],
   build: {
-    chunkSizeWarningLimit: 1600,
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            if (id.includes('rapier')) return 'rapier'
-            if (id.includes('three') || id.includes('@react-three')) return 'three'
-            if (id.includes('gsap') || id.includes('framer-motion') || id.includes('lenis')) return 'motion'
-          }
-        }
-      }
-    }
-  }
+    // rapier (física) pesa ~2 MB por su WebAssembly embebido; carga en diferido
+    chunkSizeWarningLimit: 2200,
+    // sin manualChunks: las escenas 3D se importan con lazy() (Lazy3D.jsx) y
+    // Rollup ya separa three/rapier en chunks diferidos. Forzarlos a mano
+    // metía helpers compartidos dentro del chunk de three y obligaba a
+    // descargar 1 MB de three.js al abrir la página.
+  },
 })

@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import Reveal from '../components/Reveal'
-import { LazyLanyard, LazyGuide } from '../components/Lazy3D'
+import { LanyardAnchor, GuideAnchor } from '../components/Lazy3D'
+import { nyxSay } from '../lib/nyxEvents'
 import { identity, perfil, capacidades, expedientes, fueraDeHorario, contacto, zones } from '../data/content'
 
 function Tag({ i }) {
@@ -101,13 +102,9 @@ export function Z01() {
           </motion.div>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3, duration: 1.2 }}
-        >
-          <LazyLanyard />
-        </motion.div>
+        {/* sin animación de entrada: la escena 3D mide esta caja, y un
+            transform (escala, desplazamiento) falsearía la medida */}
+        <LanyardAnchor />
       </div>
     </section>
   )
@@ -118,9 +115,7 @@ export function Z02() {
   return (
     <section id="z02" className="zone">
       <div className="zone-inner z2-grid">
-        <Reveal from="scale">
-          <LazyGuide />
-        </Reveal>
+        <GuideAnchor />
 
         <div>
           <Reveal from="mask">
@@ -188,7 +183,7 @@ export function Z03() {
                 <div className="cap-row-top">
                   <div className="cap-row-id">
                     <span className="cap-idx">{`C.0${i + 1}`}</span>
-                    <h4>{c.titulo}</h4>
+                    <h3>{c.titulo}</h3>
                   </div>
                   <div className="lvl">
                     <motion.b
@@ -216,12 +211,20 @@ export function Z03() {
 
 /* ================= Z-04 EXPEDIENTES ================= */
 export function FileCard({ p, onOpen }) {
+  // si la captura no existe (o falla al cargar) queda el degradado de `tono`
+  const [imgFailed, setImgFailed] = useState(false)
   return (
     <article className="file" data-cursor onClick={onOpen} role={onOpen ? 'button' : undefined} tabIndex={onOpen ? 0 : undefined}
       onKeyDown={(e) => { if (onOpen && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onOpen() } }}>
       <div className="file-shot">
-        {p.imagen ? (
-          <img className="sheen" src={p.imagen} alt={`Captura de pantalla de ${p.nombre}`} loading="lazy" />
+        {p.imagen && !imgFailed ? (
+          <img
+            className="sheen"
+            src={p.imagen}
+            alt={`Captura de pantalla de ${p.nombre}`}
+            loading="lazy"
+            onError={() => setImgFailed(true)}
+          />
         ) : (
           <div
             className="sheen"
@@ -236,7 +239,7 @@ export function FileCard({ p, onOpen }) {
         </div>
       </div>
       <div className="file-body">
-        <h4>{p.nombre}</h4>
+        <h3>{p.nombre}</h3>
         <p>{p.resumen}</p>
         <div className="file-tags">
           {p.stack.map((s) => (
@@ -337,11 +340,14 @@ export function Z06() {
       if (data.success) {
         setEstado('ok')
         form.reset()
+        nyxSay({ mood: 'celebrando', text: '¡Mensaje enviado! 🎉 Yair te responde pronto, normalmente el mismo día.' })
       } else {
         setEstado('error')
+        nyxSay({ mood: 'sorprendido', text: `Uy, no se pudo enviar. Escríbele directo a ${contacto.email}.` })
       }
     } catch {
       setEstado('error')
+      nyxSay({ mood: 'sorprendido', text: `Uy, no se pudo enviar. Escríbele directo a ${contacto.email}.` })
     }
   }
 

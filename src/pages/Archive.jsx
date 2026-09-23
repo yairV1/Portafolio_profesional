@@ -111,6 +111,7 @@ export default function Archive() {
             <div className="sheet-bg" onClick={() => setOpen(null)} />
             <motion.div
               className="sheet-body"
+              data-lenis-prevent
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}

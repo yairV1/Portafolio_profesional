@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://yairv1.github.io/Portafolio_prosonal/sitemap.xml
+Sitemap: https://yairv1.github.io/Portafolio_profesional/sitemap.xml

@@ -4,6 +4,10 @@
    Los valores marcados con [ ] son placeholders — reemplázalos.
    ============================================================ */
 
+// con Vite es la base del sitio; fuera de Vite (la función api/chat.js, los
+// tests) import.meta.env no existe y se usa la raíz
+const BASE = import.meta.env?.BASE_URL ?? '/'
+
 export const identity = {
   nombre: 'Yair',
   apellido: 'Vergara',
@@ -14,7 +18,7 @@ export const identity = {
     'Construyo productos digitales rápidos, escalables y cuidados al detalle. Me interesa el punto exacto donde el código limpio y el buen diseño se encuentran.',
   disponible: 'Disponible para proyectos',
   cv: '#', // ruta a tu CV en /public, ej: '/cv-yair.pdf' — mientras valga '#' el botón de descarga se oculta
-  foto: `${import.meta.env.BASE_URL}foto.webp`,
+  foto: `${BASE}foto.png`,
   stackHero: ['React', 'TypeScript', 'Laravel', 'Node.js', 'MySQL', 'Three.js'],
 }
 
@@ -64,7 +68,7 @@ export const expedientes = [
     problema:
       'La institución llevaba evaluaciones, asistencia y reportes en sistemas o planillas desconectadas entre sí, sin un control de acceso claro según el rol de cada usuario (docente, administrativo, directivo).',
     stack: ['Laravel', 'MySQL', 'Vue.js'],
-    imagen: `${import.meta.env.BASE_URL}proyectos/sistema-escolar.webp`,
+    imagen: `${BASE}proyectos/sistema-escolar.webp`,
     tono: ['#3B1D8F', '#7C3AED'],
     demo: '#',
     repo: '#',
@@ -89,7 +93,7 @@ export const expedientes = [
     problema:
       'La clínica agendaba citas y llevaba el historial clínico de cada paciente por separado, sin control de solapamiento de horarios ni visibilidad del inventario de insumos médicos disponible.',
     stack: ['Laravel', 'MySQL', 'Alpine.js'],
-    imagen: `${import.meta.env.BASE_URL}proyectos/vetwilling.webp`,
+    imagen: `${BASE}proyectos/vetwilling.webp`,
     tono: ['#0E3B4C', '#22D3EE'],
     demo: '#',
     repo: '#',
@@ -158,7 +162,7 @@ export const expedientes = [
     arquitectura: [
       'Física de cuerpo rígido con Rapier para el carné',
       'Scroll suavizado con Lenis sincronizado con GSAP',
-      'Texturas generadas en runtime, sin assets externos',
+      'Texturas del carné dibujadas en runtime con canvas',
     ],
     aprendizajes: [
       'Presupuesto de rendimiento en escenas 3D',

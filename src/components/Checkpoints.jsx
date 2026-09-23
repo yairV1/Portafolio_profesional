@@ -4,7 +4,7 @@ import { getLenis } from '../lib/lenisSingleton'
 
 // línea de activación: sección considerada "activa" es la última (en orden
 // de documento) cuyo borde superior ya cruzó este % de la altura del viewport
-const ACTIVE_LINE_RATIO = 0.3
+const ACTIVE_LINE_RATIO = 0.5
 
 export default function Checkpoints() {
   const [active, setActive] = useState('z01')
@@ -20,25 +20,6 @@ export default function Checkpoints() {
       for (const el of els) {
         if (el.getBoundingClientRect().top <= lineY) current = el.id
       }
-
-      const tops = els.map((e) => ({ id: e.id, top: Math.round(e.getBoundingClientRect().top) }))
-      console.log('[pickActive] current=' + current, 'scrollY=' + window.scrollY, 'lineY=' + Math.round(lineY), 'tops=' + JSON.stringify(tops))
-
-      if (current === 'z05') {
-        const z06 = document.getElementById('z06')
-        if (z06) {
-          const r = z06.getBoundingClientRect()
-          const heading = [...z06.querySelectorAll('h2, .zt')].find((h) => h.textContent.includes('Solicitar'))
-          const hr = heading ? heading.getBoundingClientRect() : null
-          console.log(
-            '[pickActive][z05-but-check-z06]',
-            'z06.rect=' + JSON.stringify({ top: r.top, bottom: r.bottom, height: r.height, y: r.y }),
-            'headingFound=' + !!heading,
-            'heading.rect=' + JSON.stringify(hr ? { top: hr.top, bottom: hr.bottom, y: hr.y } : null)
-          )
-        }
-      }
-
       setActive((prev) => (prev === current ? prev : current))
     }
 

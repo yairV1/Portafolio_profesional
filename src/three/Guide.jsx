@@ -1,7 +1,7 @@
 import * as THREE from 'three'
-import { useRef, useMemo, useState, useEffect } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
-import { Float, Environment, Lightformer, useGLTF } from '@react-three/drei'
+import { useRef, useMemo, useEffect } from 'react'
+import { useFrame } from '@react-three/fiber'
+import { Float, useGLTF } from '@react-three/drei'
 
 /* Guía de la instalación: modelo real (CC0, Quaternius "Animated Robot Pack",
    convertido de OBJ a glb) que saluda al llegar a la sección, sigue el
@@ -178,7 +178,7 @@ function Robot({ scrollTilt, waveTrigger }) {
       </group>
 
       {/* halo suave bajo el robot */}
-      <mesh position={[0.03, -1.58, 0.055]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0.03, 0.02, 0.055]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.9, 1.3, 64]} />
         <meshBasicMaterial color="#8B5CF6" transparent opacity={0.14} side={THREE.DoubleSide} />
       </mesh>
@@ -186,79 +186,21 @@ function Robot({ scrollTilt, waveTrigger }) {
   )
 }
 
-export default function Guide() {
-  const reduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  const stageRef = useRef()
-  const scrollTilt = useRef(0)
-  const [waveTrigger, setWaveTrigger] = useState(0)
-
-  useEffect(() => {
-    const onScroll = () => {
-      const el = stageRef.current
-      if (!el) return
-      const r = el.getBoundingClientRect()
-      const vh = window.innerHeight
-      // -1 cuando el bloque está por debajo del viewport, +1 cuando ya pasó por arriba
-      const progress = THREE.MathUtils.clamp((vh * 0.5 - (r.top + r.height * 0.5)) / (vh * 0.7), -1, 1)
-      scrollTilt.current = progress
-    }
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
-
-  // saluda una vez cuando el robot entra en el viewport
-  useEffect(() => {
-    const el = stageRef.current
-    if (!el) return
-    const io = new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting) {
-          setWaveTrigger((n) => n + 1)
-          io.disconnect()
-        }
-      },
-      { threshold: 0.4 }
-    )
-    io.observe(el)
-    return () => io.disconnect()
-  }, [])
-
+/* El robot con sus luces, para la escena 3D única (Scene3D.jsx). Su cámara
+   original era otra (fov 42 a 9.4 de distancia): `scale` lo lleva al mismo
+   tamaño aparente dentro de la cámara compartida. */
+export function GuideRig({ origin, scale, reduced, scrollTilt, waveTrigger }) {
   return (
-    <div
-      className="guide-stage"
-      ref={stageRef}
-      role="button"
-      tabIndex={0}
-      aria-label="Robot guía. Haz clic para saludar."
-      style={{ cursor: 'pointer' }}
-      onClick={() => setWaveTrigger((n) => n + 1)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') setWaveTrigger((n) => n + 1)
-      }}
-    >
-      <Canvas
-        camera={{ position: [0, 0, 9.4], fov: 42 }}
-        dpr={[1, 1.75]}
-        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
-      >
-        <ambientLight intensity={0.6} />
-        <pointLight position={[3, 3, 4]} intensity={26} color="#C4B5FD" distance={18} />
-        <pointLight position={[-4, -2, 2]} intensity={20} color="#22D3EE" distance={18} />
-
-        {reduced ? (
+    <group position={[origin[0], origin[1], 0]} scale={scale}>
+      <pointLight position={[3, 3, 4]} intensity={26} color="#C4B5FD" distance={18} />
+      <pointLight position={[-4, -2, 2]} intensity={20} color="#22D3EE" distance={18} />
+      {reduced ? (
+        <Robot scrollTilt={scrollTilt} waveTrigger={waveTrigger} />
+      ) : (
+        <Float speed={1.35} rotationIntensity={0.06} floatIntensity={0.2}>
           <Robot scrollTilt={scrollTilt} waveTrigger={waveTrigger} />
-        ) : (
-          <Float speed={1.35} rotationIntensity={0.06} floatIntensity={0.2}>
-            <Robot scrollTilt={scrollTilt} waveTrigger={waveTrigger} />
-          </Float>
-        )}
-
-        <Environment resolution={128}>
-          <Lightformer intensity={3} color="#8B5CF6" position={[-2, 2, 3]} scale={[8, 8, 1]} />
-          <Lightformer intensity={2} color="#22D3EE" position={[3, -1, 2]} scale={[6, 6, 1]} />
-        </Environment>
-      </Canvas>
-    </div>
+        </Float>
+      )}
+    </group>
   )
 }
