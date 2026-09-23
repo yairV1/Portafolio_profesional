@@ -1,10 +1,11 @@
 import * as THREE from 'three'
 import { useEffect, useRef, useState, useMemo } from 'react'
-import { Canvas, extend, useFrame, useThree } from '@react-three/fiber'
-import { ContactShadows, Environment, Lightformer } from '@react-three/drei'
+import { extend, useFrame, useThree } from '@react-three/fiber'
+import { ContactShadows } from '@react-three/drei'
 import { BallCollider, CuboidCollider, Physics, RigidBody, useRopeJoint, useSphericalJoint } from '@react-three/rapier'
 import { MeshLineGeometry, MeshLineMaterial } from 'meshline'
 import { identity, capacidades, contacto } from '../data/content'
+import { nyxSay } from '../lib/nyxEvents'
 
 extend({ MeshLineGeometry, MeshLineMaterial })
 
@@ -280,7 +281,22 @@ function drawCardBack() {
   return t
 }
 
-function useCardTexture(src) {
+// las texturas se dibujan en canvas con las fuentes del sitio, que cargan en
+// diferido: cada vez que termina de cargar una fuente se vuelven a dibujar
+function useFontsVersion() {
+  const [version, setVersion] = useState(0)
+  useEffect(() => {
+    const fonts = document.fonts
+    if (!fonts) return
+    const bump = () => setVersion((v) => v + 1)
+    fonts.addEventListener('loadingdone', bump)
+    fonts.ready.then(bump)
+    return () => fonts.removeEventListener('loadingdone', bump)
+  }, [])
+  return version
+}
+
+function useCardTexture(src, fontsVersion) {
   const [tex, setTex] = useState(null)
   useEffect(() => {
     let alive = true
@@ -301,12 +317,12 @@ function useCardTexture(src) {
     return () => {
       alive = false
     }
-  }, [src])
+  }, [src, fontsVersion])
   return tex
 }
 
 /* ---------- el carné colgante ---------- */
-function Band({ maxSpeed = 50, minSpeed = 10, reduced, flipTrigger }) {
+function Band({ maxSpeed = 50, minSpeed = 10, reduced, flipTrigger, origin = [0, 0] }) {
   const band = useRef()
   const fixed = useRef()
   const j1 = useRef()
@@ -329,9 +345,14 @@ function Band({ maxSpeed = 50, minSpeed = 10, reduced, flipTrigger }) {
   const [flipped, setFlipped] = useState(false)
   const downPos = useRef({ x: 0, y: 0 })
 
-  const bandTex = useMemo(() => makeBandTexture(), [])
-  const faceTex = useCardTexture(identity.foto)
-  const backTex = useMemo(() => drawCardBack(), [])
+  const fontsVersion = useFontsVersion()
+  const bandTex = useMemo(() => makeBandTexture(), [fontsVersion])
+  const faceTex = useCardTexture(identity.foto, fontsVersion)
+  const backTex = useMemo(() => drawCardBack(), [fontsVersion])
+  // al redibujar, las texturas anteriores se liberan de la GPU
+  useEffect(() => () => bandTex.dispose(), [bandTex])
+  useEffect(() => () => backTex.dispose(), [backTex])
+  useEffect(() => () => faceTex?.dispose(), [faceTex])
 
   // el mismo giro se puede disparar por teclado (ver Lanyard(), más abajo,
   // que sube flipTrigger en el wrapper accesible) o con un tap/click corto
@@ -340,6 +361,10 @@ function Band({ maxSpeed = 50, minSpeed = 10, reduced, flipTrigger }) {
     if (!flipTrigger) return
     setFlipped((f) => !f)
   }, [flipTrigger])
+
+  useEffect(() => {
+    if (flipped) nyxSay({ key: 'carne-reverso', mood: 'sorprendido', text: '¡Ese es el reverso! Ahí está su perfil técnico y sus redes.' })
+  }, [flipped])
 
   // con reduced-motion la física está en pausa (paused={reduced} en
   // <Physics>, en Lanyard()) así que un torque no movería nada: en ese caso
@@ -354,6 +379,13 @@ function Band({ maxSpeed = 50, minSpeed = 10, reduced, flipTrigger }) {
   useRopeJoint(j1, j2, [[0, 0, 0], [0, 0, 0], 1])
   useRopeJoint(j2, j3, [[0, 0, 0], [0, 0, 0], 1])
   useSphericalJoint(j3, card, [[0, 0, 0], [0, 0, -0.05]])
+
+  // mientras se arrastra, el puntero pasa por encima del texto de la página:
+  // sin esto el navegador lo iría seleccionando
+  useEffect(() => {
+    document.documentElement.classList.toggle('is-grabbing', Boolean(dragged))
+    return () => document.documentElement.classList.remove('is-grabbing')
+  }, [dragged])
 
   useEffect(() => {
     if (hovered) document.body.style.cursor = dragged ? 'grabbing' : 'grab'
@@ -370,8 +402,12 @@ function Band({ maxSpeed = 50, minSpeed = 10, reduced, flipTrigger }) {
     return () => clearTimeout(t)
   }, [])
 
-  useFrame((state, delta) => {
+  useFrame((state, rawDelta) => {
     if (!fixed.current || !card.current) return
+    // acota saltos de delta (pestaña en segundo plano, carga inicial): con un
+    // delta grande el lerp de abajo se pasaba del objetivo y la cinta salía
+    // disparada en diagonal
+    const delta = Math.min(rawDelta, 1 / 30)
 
     if (dragged) {
       vec.set(state.pointer.x, state.pointer.y, 0.5).unproject(state.camera)
@@ -387,9 +423,10 @@ function Band({ maxSpeed = 50, minSpeed = 10, reduced, flipTrigger }) {
 
     ;[j1, j2].forEach((ref) => {
       if (!ref.current) return
-      if (!ref.current.lerped) ref.current.lerped = new THREE.Vector3().copy(ref.current.translation())
+      // se (re)inicia si nunca se creó o quedó en NaN, para que un frame malo no la rompa para siempre
+      if (!ref.current.lerped || !Number.isFinite(ref.current.lerped.x)) ref.current.lerped = new THREE.Vector3().copy(ref.current.translation())
       const clamped = Math.max(0.1, Math.min(1, ref.current.lerped.distanceTo(ref.current.translation())))
-      ref.current.lerped.lerp(ref.current.translation(), delta * (minSpeed + clamped * (maxSpeed - minSpeed)))
+      ref.current.lerped.lerp(ref.current.translation(), Math.min(1, delta * (minSpeed + clamped * (maxSpeed - minSpeed))))
     })
 
     if (!j1.current?.lerped || !j2.current?.lerped || !j3.current) return
@@ -398,7 +435,12 @@ function Band({ maxSpeed = 50, minSpeed = 10, reduced, flipTrigger }) {
     curve.points[1].copy(j2.current.lerped)
     curve.points[2].copy(j1.current.lerped)
     curve.points[3].copy(fixed.current.translation())
-    band.current?.geometry.setPoints(curve.getPoints(32))
+    // un cuerpo que todavía no tiene posición válida (primeros frames, física
+    // recién montada) daría NaN en toda la cinta: se salta ese frame
+    const points = curve.getPoints(32)
+    if (points.every((v) => Number.isFinite(v.x) && Number.isFinite(v.y) && Number.isFinite(v.z))) {
+      band.current?.geometry.setPoints(points)
+    }
 
     ang.copy(card.current.angvel())
     if (reduced) {
@@ -421,7 +463,7 @@ function Band({ maxSpeed = 50, minSpeed = 10, reduced, flipTrigger }) {
 
   return (
     <>
-      <group position={[0, 4.2, 0]}>
+      <group position={[origin[0], origin[1] + 4.2, 0]}>
         <RigidBody ref={fixed} {...segmentProps} type="fixed" />
         <RigidBody position={[0.5, 0, 0]} ref={j1} {...segmentProps}>
           <BallCollider args={[0.1]} />
@@ -562,48 +604,23 @@ function Band({ maxSpeed = 50, minSpeed = 10, reduced, flipTrigger }) {
   )
 }
 
-export default function Lanyard() {
-  const reduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  const [flipTrigger, setFlipTrigger] = useState(0)
-  const flip = () => setFlipTrigger((n) => n + 1)
-
+/* El carné con sus luces y su física, para montarse dentro de la escena 3D
+   única (Scene3D.jsx). `origin` es el centro de su ancla en coordenadas de
+   mundo: la cinta y los cuerpos se crean ahí, y si el layout cambia Scene3D
+   lo vuelve a montar con el origen nuevo (la física no se puede "mover"). */
+export function LanyardRig({ origin, reduced, active, flipTrigger }) {
   return (
-    <div
-      className="lanyard-stage"
-      role="button"
-      tabIndex={0}
-      aria-label="Credencial de acceso. Presiona Enter para girarla y ver el reverso."
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          flip()
-        }
-      }}
-    >
-      <Canvas
-        camera={{ position: [0, 0, 13], fov: 25 }}
-        dpr={[1, 1.75]}
-        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
-      >
-        <ambientLight intensity={0.85} />
-        <directionalLight position={[4, 6, 5]} intensity={1.4} castShadow />
+    <>
+      <group position={[origin[0], origin[1], 0]}>
+        <directionalLight position={[4, 6, 5]} intensity={1.4} />
         <pointLight position={[-4, -2, 3]} intensity={18} color="#8B5CF6" distance={16} />
         <pointLight position={[5, 1, 4]} intensity={12} color="#22D3EE" distance={16} />
-
-        <Physics gravity={[0, -30, 0]} timeStep={1 / 60} paused={reduced}>
-          <Band reduced={reduced} flipTrigger={flipTrigger} />
-        </Physics>
-
         <ContactShadows position={[0, -2.6, 0]} opacity={0.5} scale={12} blur={2.8} far={6} resolution={512} color="#050308" />
+      </group>
 
-        <Environment resolution={128}>
-          <Lightformer intensity={2.4} color="#C4B5FD" position={[0, -1, 5]} rotation={[0, 0, Math.PI / 3]} scale={[100, 0.15, 1]} />
-          <Lightformer intensity={2.6} color="#8B5CF6" position={[-1, -1, 1]} rotation={[0, 0, Math.PI / 3]} scale={[100, 0.12, 1]} />
-          <Lightformer intensity={2.6} color="#22D3EE" position={[1, 1, -1]} rotation={[0, 0, Math.PI / 3]} scale={[100, 0.12, 1]} />
-          <Lightformer intensity={3.5} color="#ffffff" position={[-8, 4, 12]} scale={[12, 12, 1]} />
-        </Environment>
-      </Canvas>
-      <span className="drag-hint">Arrastra la credencial · toca para girarla</span>
-    </div>
+      <Physics gravity={[0, -30, 0]} timeStep={1 / 60} paused={reduced || !active}>
+        <Band reduced={reduced} flipTrigger={flipTrigger} origin={origin} />
+      </Physics>
+    </>
   )
 }

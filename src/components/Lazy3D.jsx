@@ -1,75 +1,66 @@
-import { Suspense, lazy, useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useRef, useState } from 'react'
+import { ANCHOR_IDS, flipCard, waveRobot } from '../lib/stage3d'
 
-const Lanyard = lazy(() => import('../three/Lanyard'))
-const Guide = lazy(() => import('../three/Guide'))
+// three.js, la física y los modelos viven en este chunk diferido
+const Scene3D = lazy(() => import('../three/Scene3D'))
 
-function Placeholder({ tall }) {
+const onActivate = (action) => (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault()
+    action()
+  }
+}
+
+function Loading() {
+  return <span className="stage-loading">Cargando escena</span>
+}
+
+/* Envuelve las secciones que comparten la escena 3D (Recepción y Perfil): el
+   lienzo cubre todo este contenedor por detrás del contenido, así que el
+   carné y el robot se mueven sin quedar recortados por una caja. */
+export function Stage3D({ children }) {
+  const wrapRef = useRef(null)
+  const [ready, setReady] = useState(false)
+  return (
+    <div className="stage3d" ref={wrapRef} data-ready={ready || undefined}>
+      {children}
+      <Suspense fallback={null}>
+        <Scene3D wrapRef={wrapRef} onReady={() => setReady(true)} />
+      </Suspense>
+    </div>
+  )
+}
+
+/* Anclas: cajas vacías en el layout que marcan dónde y de qué tamaño se
+   dibuja cada objeto, y que conservan teclado, clic y lectores de pantalla. */
+export function LanyardAnchor() {
   return (
     <div
-      className={tall ? 'lanyard-stage' : 'guide-stage'}
-      style={{ display: 'grid', placeItems: 'center' }}
-      aria-hidden="true"
+      id={ANCHOR_IDS.lanyard}
+      className="lanyard-stage"
+      role="button"
+      tabIndex={0}
+      aria-label="Credencial de acceso. Presiona Enter para girarla y ver el reverso."
+      onKeyDown={onActivate(flipCard)}
     >
-      <span
-        style={{
-          fontFamily: 'var(--mono)',
-          fontSize: 10,
-          letterSpacing: '.2em',
-          textTransform: 'uppercase',
-          color: 'var(--dust-2)',
-        }}
-      >
-        Cargando escena
-      </span>
+      <Loading />
+      <span className="drag-hint">Arrastra la credencial · toca para girarla</span>
     </div>
   )
 }
 
-/* Solo monta cada canvas cuando su propia sección está cerca del viewport,
-   en vez de arrancar los dos contextos WebGL desde la carga inicial. Cada
-   instancia decide por su cuenta (no hay exclusión mutua entre ellas): si
-   Z-01 y Z-02 están cerca del viewport a la vez, ambas escenas pueden
-   quedar montadas juntas — es intencional, evita que una de las dos
-   desaparezca mientras el usuario todavía la tiene a la vista. */
-function WhenNear({ children, tall }) {
-  const ref = useRef(null)
-  const [near, setNear] = useState(false)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const io = new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting) {
-          setNear(true)
-          io.disconnect()
-        }
-      },
-      { rootMargin: '400px 0px 400px 0px' }
-    )
-    io.observe(el)
-    return () => io.disconnect()
-  }, [])
-
+export function GuideAnchor() {
   return (
-    <div ref={ref}>
-      {near ? <Suspense fallback={<Placeholder tall={tall} />}>{children}</Suspense> : <Placeholder tall={tall} />}
+    <div
+      id={ANCHOR_IDS.guide}
+      className="guide-stage"
+      role="button"
+      tabIndex={0}
+      aria-label="Robot guía. Haz clic para saludar."
+      onClick={waveRobot}
+      onKeyDown={onActivate(waveRobot)}
+    >
+      <Loading />
     </div>
-  )
-}
-
-export function LazyLanyard() {
-  return (
-    <WhenNear tall>
-      <Lanyard />
-    </WhenNear>
-  )
-}
-
-export function LazyGuide() {
-  return (
-    <WhenNear>
-      <Guide />
-    </WhenNear>
   )
 }
